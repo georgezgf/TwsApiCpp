@@ -1,0 +1,43 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Src">
+      <UniqueIdentifier>{22d913b7-4a8f-4fc4-add9-8cdf214d29e5}</UniqueIdentifier>
+      <Extensions>cpp;c;cxx;rc;def;r;odl;idl;hpj;bat</Extensions>
+    </Filter>
+    <Filter Include="Api">
+      <UniqueIdentifier>{62bc55e4-c027-4e83-bf36-a249307bb6cd}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\Src\Bars.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Clients.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Empty.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\History.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Test.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\OrderSamples.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\Api\Enumerations.h">
+      <Filter>Api</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Api\TwsApiDefs.h">
+      <Filter>Api</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Api\TwsApiL0.h">
+      <Filter>Api</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
