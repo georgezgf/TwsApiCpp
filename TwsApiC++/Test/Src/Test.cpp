@@ -220,7 +220,7 @@ struct Contract_ : public Contract
 
 Contract_			C( "AMZN", *SecType::STK, "USD", *Exchange::IB_SMART, *Exchange::ISLAND );
 
-int main( void )
+int mainT( void )
 {
 	printf( "APIVersion    = %s\n", EClientL0::apiVersion() );
 
@@ -270,6 +270,8 @@ int main( void )
 			, FormatDate::AsDate
 			);
 
+		TEST(30, EC->placeOrder(11, C, OrderSamples::LimitOrder("BUY", 100, 935)));
+
 /*
 //		EC->reqMktData( 20, C, false );
 		EC->reqHistoricalData
@@ -277,7 +279,7 @@ int main( void )
 		, C
 		, EndDateTime(2006,10,03), DurationStr(1, DH_Days), *BarSizeSetting::_1_secs
 		, *WS_TRADES
-		, true
+		, true 
 		, FD_AsDate
 		);
 */

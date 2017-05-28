@@ -10,22 +10,22 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\Src\Bars.cpp">
-      <Filter>Src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Clients.cpp">
-      <Filter>Src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Empty.cpp">
-      <Filter>Src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\History.cpp">
-      <Filter>Src</Filter>
-    </ClCompile>
     <ClCompile Include="..\Src\Test.cpp">
       <Filter>Src</Filter>
     </ClCompile>
     <ClCompile Include="..\Src\OrderSamples.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\ContractSamples.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\myEWrapper.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Main.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\IBAPI.cpp">
       <Filter>Src</Filter>
     </ClCompile>
   </ItemGroup>
@@ -37,6 +37,18 @@
       <Filter>Api</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Api\TwsApiL0.h">
+      <Filter>Api</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Api\myEWrapper.h">
+      <Filter>Api</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Api\myStruct.h">
+      <Filter>Api</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Api\IBAPI.h">
+      <Filter>Api</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Api\CSVIterator.h">
       <Filter>Api</Filter>
     </ClInclude>
   </ItemGroup>
