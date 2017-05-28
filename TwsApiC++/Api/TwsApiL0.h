@@ -64,6 +64,7 @@ struct IBString: public _IBString
 #include "ScannerSubscription.h"
 #include "CommissionReport.h"
 #include "OrderSamples.h"			//Add by zgf
+#include "ContractSamples.h"		//Add by zgf
 #include "TwsSocketClientErrors.h"
 
 // An extra error to indicate a thread couldn't start during eConnect when asked for
