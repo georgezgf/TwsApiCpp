@@ -4,4 +4,4 @@
 source/PosixClient/Shared/HScrollListBox.cpp
 source/PosixClient/Shared/HScrollListBox.h
 *.suo
-TwsApiC++/_win32/.vs
+TwsApiC++/_win32/.vs/
