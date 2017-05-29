@@ -1,7 +1,9 @@
 *.obj
 *.exe
 *.a
+*.lib
 source/PosixClient/Shared/HScrollListBox.cpp
 source/PosixClient/Shared/HScrollListBox.h
 *.suo
 TwsApiC++/_win32/.vs/
+TwsApiC++/Test/_win32/Debug
