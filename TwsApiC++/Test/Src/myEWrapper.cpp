@@ -4,6 +4,7 @@
 //#include "TwsApiL0.h"			// These two headers are included in "ZGF.h"
 //#include "TwsApiDefs.h"
 #include "myEWrapper.h" 
+
 using namespace TwsApi;
 
 // to use the Sleep function
@@ -33,8 +34,10 @@ MyEWrapper::MyEWrapper() : EWrapperL0(true) {
 	b_posReady = false;
 	b_openOrdReady = false;
 	b_accSummary = false;
-	tickData.resize(10); 
-	//stockPos.resize(10);
+	n_quote = 0;
+	n_openOrder = 0;
+	
+	tickData.resize(30); 
 }
 //MyEWrapper( bool CalledFromThread = true ): EWrapperL0( CalledFromThread ). Use default tread true constructor.
 
@@ -49,6 +52,7 @@ void MyEWrapper::init_tickData() {
 	size_t size = tickData.size();
 	tickData.clear();
 	tickData.resize(size);
+	n_quote = 0;
 }
 
 
@@ -75,10 +79,12 @@ void MyEWrapper::tickPrice(TickerId tickerId, TickType field, double price, int 
 		switch (field) {
 		case BID: 
 			tickData[tickerId].bidPrice[0] = price; 
+			n_quote++;
 			//std::cout << "bid = " << tickData[tickerId].bidPrice[0] << std::endl;
 			break;
 		case ASK: 
 			tickData[tickerId].askPrice[0] = price; 
+			n_quote++;
 			//std::cout << "ask = " << tickData[tickerId].askPrice[0] << std::endl;
 			break;
 		}
@@ -100,10 +106,12 @@ void MyEWrapper::tickSize(TickerId tickerId, TickType field, int size)
 	switch (field) {
 	case BID_SIZE:
 		tickData[tickerId].bidSize[0] = size; 
+		n_quote++;
 		//std::cout << "bidSize = " << tickData[tickerId].bidSize[0] << std::endl;
 		break;
 	case ASK_SIZE:
 		tickData[tickerId].askSize[0] = size; 
+		n_quote++;
 		//std::cout << "askSize = " << tickData[tickerId].askSize[0] << std::endl;
 		break;
 	}
@@ -168,13 +176,13 @@ void MyEWrapper::nextValidId(OrderId orderId)
 
 void MyEWrapper::openOrder(OrderId orderId, const Contract& contract, const Order& order, const OrderState& orderState)
 {
-	/*
+	
 	PrintProcessId, printf("OpenOrder. ID: %ld, %s, %s @ %s: %s, %s, %ld, %s\n", orderId, contract.symbol.c_str(), contract.secType.c_str(), contract.exchange.c_str(), \
 		order.action.c_str(), order.orderType.c_str(), order.totalQuantity, orderState.status.c_str());
-		*/
-
+		
 	OPEN_ORD tmpOrd = { orderId, contract.symbol.c_str(), order.action.c_str(), order.totalQuantity };
 	openOrd.push_back(tmpOrd);
+	n_openOrder++;
 }
 
 void MyEWrapper::orderStatus(OrderId orderId, const IBString& status, int filled, int remaining, double avgFillPrice, int permId, int parentId, \

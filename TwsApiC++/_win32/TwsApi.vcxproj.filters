@@ -86,6 +86,9 @@
     <ClInclude Include="..\..\source\PosixClient\Shared\OrderSamples.h">
       <Filter>source/PosixClient/shared</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\source\PosixClient\Shared\ContractSamples.h">
+      <Filter>source/PosixClient/shared</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Src\TwsApiL0.cpp">

@@ -1,14 +1,16 @@
 ﻿  TwsApiL0.cpp
-C:\Users\Gufeng Zhang\Downloads\TwsApiCpp-master\source\PosixClient\Shared\OrderSamples.h(8): warning C4099: 'Order': type name first seen using 'struct' now seen using 'class'
-  c:\users\gufeng zhang\downloads\twsapicpp-master\source\posixclient\shared\Order.h(42): note: see declaration of 'Order'
-c:\users\gufeng zhang\downloads\twsapicpp-master\source\posixclient\src\EPosixClientSocketPlatform.h(14): warning C4005: 'EISCONN': macro redefinition
+C:\Users\Gufeng Zhang\TwsApiCpp-master\source\PosixClient\Shared\OrderSamples.h(8): warning C4099: 'Order': type name first seen using 'struct' now seen using 'class'
+  c:\users\gufeng zhang\twsapicpp-master\source\posixclient\shared\Order.h(42): note: see declaration of 'Order'
+C:\Users\Gufeng Zhang\TwsApiCpp-master\source\PosixClient\Shared\ContractSamples.h(5): warning C4099: 'Contract': type name first seen using 'struct' now seen using 'class'
+  C:\Users\Gufeng Zhang\TwsApiCpp-master\source\PosixClient\Shared\Contract.h(69): note: see declaration of 'Contract'
+c:\users\gufeng zhang\twsapicpp-master\source\posixclient\src\EPosixClientSocketPlatform.h(14): warning C4005: 'EISCONN': macro redefinition
   C:\Program Files (x86)\Windows Kits\10\Include\10.0.15063.0\ucrt\errno.h(97): note: see previous definition of 'EISCONN'
-c:\users\gufeng zhang\downloads\twsapicpp-master\source\posixclient\src\EPosixClientSocketPlatform.h(15): warning C4005: 'EWOULDBLOCK': macro redefinition
+c:\users\gufeng zhang\twsapicpp-master\source\posixclient\src\EPosixClientSocketPlatform.h(15): warning C4005: 'EWOULDBLOCK': macro redefinition
   C:\Program Files (x86)\Windows Kits\10\Include\10.0.15063.0\ucrt\errno.h(124): note: see previous definition of 'EWOULDBLOCK'
-c:\users\gufeng zhang\downloads\twsapicpp-master\source\posixclient\src\EPosixClientSocketPlatform.h(16): warning C4005: 'ECONNREFUSED': macro redefinition
+c:\users\gufeng zhang\twsapicpp-master\source\posixclient\src\EPosixClientSocketPlatform.h(16): warning C4005: 'ECONNREFUSED': macro redefinition
   C:\Program Files (x86)\Windows Kits\10\Include\10.0.15063.0\ucrt\errno.h(91): note: see previous definition of 'ECONNREFUSED'
-C:\Users\Gufeng Zhang\Downloads\TwsApiCpp-master\source\PosixClient\src\EPosixClientSocket.cpp(61): warning C4996: 'inet_addr': Use inet_pton() or InetPton() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
+C:\Users\Gufeng Zhang\TwsApiCpp-master\source\PosixClient\src\EPosixClientSocket.cpp(61): warning C4996: 'inet_addr': Use inet_pton() or InetPton() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
   C:\Program Files (x86)\Windows Kits\10\Include\10.0.15063.0\um\WinSock2.h(1830): note: see declaration of 'inet_addr'
-C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\Common7\IDE\VC\VCTargets\Microsoft.CppBuild.targets(1369,5): warning MSB8012: TargetPath(C:\Users\Gufeng Zhang\Downloads\TwsApiCpp-master\TwsApiC++\_win32\.\Debug\TwsApi.lib) does not match the Library's OutputFile property value (C:\Users\Gufeng Zhang\Downloads\TwsApiCpp-master\TwsApiC++\Api\TwsApiD.lib). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Lib.OutputFile).
+C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\Common7\IDE\VC\VCTargets\Microsoft.CppBuild.targets(1369,5): warning MSB8012: TargetPath(C:\Users\Gufeng Zhang\TwsApiCpp-master\TwsApiC++\_win32\.\Debug\TwsApi.lib) does not match the Library's OutputFile property value (C:\Users\Gufeng Zhang\TwsApiCpp-master\TwsApiC++\Api\TwsApiD.lib). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Lib.OutputFile).
 C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\Common7\IDE\VC\VCTargets\Microsoft.CppBuild.targets(1371,5): warning MSB8012: TargetName(TwsApi) does not match the Library's OutputFile property value (TwsApiD). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Lib.OutputFile).
-  TwsApi.vcxproj -> C:\Users\Gufeng Zhang\Downloads\TwsApiCpp-master\TwsApiC++\_win32\.\Debug\TwsApi.lib
+  TwsApi.vcxproj -> C:\Users\Gufeng Zhang\TwsApiCpp-master\TwsApiC++\_win32\.\Debug\TwsApi.lib

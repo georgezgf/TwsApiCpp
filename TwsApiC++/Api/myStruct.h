@@ -1,6 +1,5 @@
 #pragma once
-
-// Include customize defined structs		zgf 052317
+// Include customize defined structs
 
 #include <vector>
 

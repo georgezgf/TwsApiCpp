@@ -23,18 +23,17 @@ public:
 	~IBAPI();
 
 	void printInfo(std::string info);
+	std::vector<STOCK_ORD> getCSV(std::string str);
 
 	//QUOTE_DATA queryQuote(std::string tickerList);
 	std::map<std::string, QUOTE_DATA> queryQuote(std::vector<std::string> tickerList);
 	std::vector<STOCK_POS> queryPos();
 	std::vector<OPEN_ORD> queryOrd();
 
-	void sendLmtOrder(std::vector<STOCK_ORD> lmtOrder);
+	std::vector<int> sendLmtOrder(std::vector<STOCK_ORD> lmtOrder);
 	void closeAllPos();
 	void openMktLmt(std::vector<STOCK_ORD> lmtOrder);	//Send limit orders around open time according to bid(ask) price for BUY(SELL)
 	int queryCash();
-
-	std::vector<STOCK_ORD> getCSV(std::string str);
 };
 
 

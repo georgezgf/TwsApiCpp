@@ -112,6 +112,7 @@
     <ClInclude Include="..\..\source\PosixClient\Shared\CommissionReport.h" />
     <ClInclude Include="..\..\source\PosixClient\Shared\CommonDefs.h" />
     <ClInclude Include="..\..\source\PosixClient\Shared\Contract.h" />
+    <ClInclude Include="..\..\source\PosixClient\Shared\ContractSamples.h" />
     <ClInclude Include="..\..\source\PosixClient\Shared\EClient.h" />
     <ClInclude Include="..\..\source\PosixClient\Shared\EClientSocketBase.h" />
     <ClInclude Include="..\..\source\PosixClient\Shared\EClientSocketBaseImpl.h" />

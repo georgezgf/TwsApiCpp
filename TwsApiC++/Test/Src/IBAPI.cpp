@@ -4,6 +4,7 @@
 #include <windows.h>		// Sleep(), in miliseconds
 #include <process.h>
 #include <iomanip>
+#include <algorithm>
 
 IBAPI::IBAPI() :
 	EW(), EC(EClientL0::New(&EW)) {}
@@ -26,7 +27,7 @@ std::map<std::string, QUOTE_DATA> IBAPI::queryQuote(std::vector<std::string> tic
 
 	quoteMap.clear();
 	
-	EW.init_tickData();
+	EW.init_tickData();	// Initialize tickdata size and reset m_quoteReady to 0
 
 	for (int i = 0; i < tickerList.size(); i++){
 		EC->reqMktData(i, ContractSamples::USStock(tickerList[i]), "", false);
@@ -41,7 +42,8 @@ std::map<std::string, QUOTE_DATA> IBAPI::queryQuote(std::vector<std::string> tic
 		count++;
 		for (int i = 0; i < tickerList.size(); i++) {
 			// Check if all data in tickData is ready.
-			Ready = (EW.tickData[i].askPrice[0] > 0) & (EW.tickData[i].bidPrice[0] > 0) & (EW.tickData[i].askSize[0] > 0) & (EW.tickData[i].bidSize[0] > 0);
+			Ready = (EW.n_quote == tickerList.size()*4);	// 4 items to record for each stock: bidprice, askprice, bidsize, asksize.
+			//Ready = (EW.tickData[i].askPrice[0] > 0) & (EW.tickData[i].bidPrice[0] > 0) & (EW.tickData[i].askSize[0] > 0) & (EW.tickData[i].bidSize[0] > 0);
 			//std::cout << "Ready = " << Ready << std::endl;
 		}
 		if (count > 100) {
@@ -67,7 +69,6 @@ std::vector<STOCK_POS> IBAPI::queryPos() {
 	printInfo("Query Position. ");
 
 	EW.stockPos.clear();
-
 	EW.b_posReady = false;
 
 	EC->reqPositions();
@@ -93,7 +94,6 @@ std::vector<OPEN_ORD> IBAPI::queryOrd() {
 	printInfo("Query Open Order. ");
 
 	EW.openOrd.clear();
-
 	EW.b_openOrdReady = false;
 
 	EC->reqOpenOrders();
@@ -117,16 +117,39 @@ std::vector<OPEN_ORD> IBAPI::queryOrd() {
 }
 
 
-void IBAPI::sendLmtOrder(std::vector<STOCK_ORD> lmtOrder) {
+std::vector<int> IBAPI::sendLmtOrder(std::vector<STOCK_ORD> lmtOrder) {
 
 	printInfo("Send limit orders. ");
+	EW.openOrd.clear();
+	EW.n_openOrder = 0;
 
 	std::string action;
+	std::vector<int> orderIdList;
+	int count = 0;
 
 	for (int i = 0; i < lmtOrder.size(); i++) {
 		action = lmtOrder[i].orderQty > 0 ? "BUY" : "SELL";
 		EC->placeOrder(EW.m_orderId++, ContractSamples::USStock(lmtOrder[i].ticker), OrderSamples::LimitOrder(action, abs(lmtOrder[i].orderQty), lmtOrder[i].orderPrice));
 	}
+	
+	while (EW.n_openOrder!=2*lmtOrder.size()) {
+		Sleep(100);
+		count++;
+		if (count > 50) {
+			std::cout << "Request open order time out. Break." << std::endl;
+			break;
+		}
+	}
+	
+	for (int i = 0; i < EW.openOrd.size(); i++) {
+		//save the openOrder orderId item to the orderIdList
+		orderIdList.push_back(EW.openOrd[i].OrderId);
+	}
+	// remove duplicate orderId
+	std::sort(orderIdList.begin(), orderIdList.end());
+	orderIdList.erase(std::unique(orderIdList.begin(), orderIdList.end()),orderIdList.end());
+
+	return orderIdList;
 }
 
 void IBAPI::closeAllPos() {
