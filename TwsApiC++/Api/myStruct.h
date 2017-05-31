@@ -12,10 +12,25 @@ struct QUOTE_DATA {
 };
 
 struct OPEN_ORD {
-	int OrderId;
+	//int OrderId;
 	std::string ticker;
 	std::string action;
 	int totalQty;
+};
+
+struct ORD_STATUS {
+	std::string status;
+	int filled;
+	int remaining;
+	double avgFillPrice;
+	double lastFillPrice;
+	int clientId;
+};
+
+//Combination of OPEN_ORD and ORD_STATUS
+struct COMB_OPENORD {
+	OPEN_ORD openOrd;
+	ORD_STATUS ordStatus;
 };
 
 struct STOCK_ORD {

@@ -21,6 +21,68 @@ void IBAPI::printInfo(std::string info) {
 	std::cout << std::left << std::setfill('*')<<std::setw(40)<< info <<std::endl;
 }
 
+std::vector<STOCK_ORD> IBAPI::getCSV(std::string str) {
+
+	//Assume the csv file format: tick, score, price, share
+
+	std::ifstream file(str);
+	std::vector<std::string> row;
+	std::vector <STOCK_ORD> orderCSV;
+	STOCK_ORD tmpOrd;
+	int count = 0;
+	/*
+	if (!file.is_open()) {
+	std::cout << "Cannot open file: " << str << ". Break." << std::endl;
+	return "0";
+	}
+	*/
+
+	for (CSVIterator loop(file); loop != CSVIterator(); ++loop)
+	{
+		// Get rid of the first row (usually header). Save data from the second row.
+		if (count != 0) {
+			std::string ticker = (*loop)[0];
+			double price = std::stod((*loop)[2]);
+			int share = std::stoi((*loop)[1]) > 0 ? std::stoi((*loop)[3]) : -std::stoi((*loop)[3]);
+
+			tmpOrd = { ticker, price, share };
+
+			orderCSV.push_back(tmpOrd);
+		}
+		count++;
+	}
+
+	return orderCSV;
+}
+
+void IBAPI::waitForNextValidId() {
+	while (!EW.b_nextValidId) {
+		std::cout << "nextValidId is not ready." << std::endl;
+		Sleep(1000);
+	}
+	std::cout << "nextValidId = " << EW.m_orderId << std::endl;
+}
+
+int IBAPI::queryNextOrderId() {
+	printInfo("Query next order Id. ");
+
+	EW.b_nextValidId = false;
+	EC->reqIds(-1);
+	int count = 0;
+
+	while (!EW.b_nextValidId) {
+		Sleep(100);
+		count++;
+		if (count > 50) {
+			std::cout << "Request next order Id time out. Break." << std::endl;
+			break;
+		}
+	}
+
+	return EW.m_orderId;
+}
+
+
 std::map<std::string, QUOTE_DATA> IBAPI::queryQuote(std::vector<std::string> tickerList) {
 
 	printInfo("Query Quote. ");
@@ -43,7 +105,6 @@ std::map<std::string, QUOTE_DATA> IBAPI::queryQuote(std::vector<std::string> tic
 		for (int i = 0; i < tickerList.size(); i++) {
 			// Check if all data in tickData is ready.
 			Ready = (EW.n_quote == tickerList.size()*4);	// 4 items to record for each stock: bidprice, askprice, bidsize, asksize.
-			//Ready = (EW.tickData[i].askPrice[0] > 0) & (EW.tickData[i].bidPrice[0] > 0) & (EW.tickData[i].askSize[0] > 0) & (EW.tickData[i].bidSize[0] > 0);
 			//std::cout << "Ready = " << Ready << std::endl;
 		}
 		if (count > 100) {
@@ -89,11 +150,11 @@ std::vector<STOCK_POS> IBAPI::queryPos() {
 	return EW.stockPos;
 }
 
-std::vector<OPEN_ORD> IBAPI::queryOrd() {
+std::map<int, COMB_OPENORD> IBAPI::queryOrd() {
 
 	printInfo("Query Open Order. ");
 
-	EW.openOrd.clear();
+	EW.combOpenOrd.clear();
 	EW.b_openOrdReady = false;
 
 	EC->reqOpenOrders();
@@ -101,7 +162,7 @@ std::vector<OPEN_ORD> IBAPI::queryOrd() {
 	int count = 0;
 
 	while (!EW.b_openOrdReady) {
-		Sleep(500);
+		Sleep(100);
 		count++;
 		if (count > 20) {
 			std::cout << "Request open order time out. Break." << std::endl;
@@ -109,48 +170,68 @@ std::vector<OPEN_ORD> IBAPI::queryOrd() {
 		}
 	}
 
-	if (EW.openOrd.size() == 0) {
+	if (EW.combOpenOrd.size() == 0) {
 		std::cout << "No open order now." << std::endl;
 	}
 
-	return EW.openOrd;
+	return EW.combOpenOrd;
 }
 
+int IBAPI::queryCash() {
 
-std::vector<int> IBAPI::sendLmtOrder(std::vector<STOCK_ORD> lmtOrder) {
+	printInfo("Request account cash balance. ");
+
+	EC->reqAccountSummary(9001, "All", "$LEDGER");
+
+	int count = 0;
+
+	while (!EW.b_accSummary) {
+		Sleep(100);
+		count++;
+		if (count > 100) {
+			std::cout << "Request cash balance time out. Break." << std::endl;
+			break;
+		}
+	}
+
+	EC->cancelAccountSummary(9001);
+
+	return EW.cashBalance;
+}
+
+std::map<int, COMB_OPENORD> IBAPI::sendLmtOrder(std::vector<STOCK_ORD> lmtOrder) {
 
 	printInfo("Send limit orders. ");
-	EW.openOrd.clear();
-	EW.n_openOrder = 0;
+	EW.combOpenOrd.clear();
+	EW.b_openOrdReady = false;
 
 	std::string action;
 	std::vector<int> orderIdList;
 	int count = 0;
+	int orderId = queryNextOrderId();
 
 	for (int i = 0; i < lmtOrder.size(); i++) {
 		action = lmtOrder[i].orderQty > 0 ? "BUY" : "SELL";
 		EC->placeOrder(EW.m_orderId++, ContractSamples::USStock(lmtOrder[i].ticker), OrderSamples::LimitOrder(action, abs(lmtOrder[i].orderQty), lmtOrder[i].orderPrice));
 	}
-	
-	while (EW.n_openOrder!=2*lmtOrder.size()) {
+
+	while (!EW.b_openOrdReady) {
 		Sleep(100);
 		count++;
-		if (count > 50) {
+		if (count > 20) {
 			std::cout << "Request open order time out. Break." << std::endl;
 			break;
 		}
 	}
 	
-	for (int i = 0; i < EW.openOrd.size(); i++) {
-		//save the openOrder orderId item to the orderIdList
-		orderIdList.push_back(EW.openOrd[i].OrderId);
-	}
-	// remove duplicate orderId
-	std::sort(orderIdList.begin(), orderIdList.end());
-	orderIdList.erase(std::unique(orderIdList.begin(), orderIdList.end()),orderIdList.end());
-
-	return orderIdList;
+	return EW.combOpenOrd;
 }
+
+
+
+/********************************************************/
+/*The following are more advanced functions*/
+
 
 void IBAPI::closeAllPos() {
 
@@ -160,7 +241,7 @@ void IBAPI::closeAllPos() {
 	STOCK_ORD tmpOrd;
 	std::vector<std::string> closeTickerList;
 	double closePrice;
-	bool zeroPos = true;	// To make sure that there is position to close.
+	bool zeroPos = true;	// make sure there is position to close.
 
 	std::vector<STOCK_POS> Position = queryPos();
 
@@ -198,7 +279,7 @@ void IBAPI::closeAllPos() {
 
 	printInfo("Send close orders. ");
 
-	sendLmtOrder(closeOrd);
+	std::map<int, COMB_OPENORD> orderIdList = sendLmtOrder(closeOrd);
 
 }
 
@@ -225,61 +306,12 @@ void IBAPI::openMktLmt(std::vector<STOCK_ORD> lmtOrder) {
 		std::cout << "Order ticker:" << orderForSend[i].ticker << ". Limit price:" << orderForSend[i].orderPrice << ". Order quantity: " << orderForSend[i].orderQty << std::endl;
 	}
 
-	sendLmtOrder(orderForSend);
+	std::map<int, COMB_OPENORD> orderIdList=sendLmtOrder(orderForSend);
 }
 
-int IBAPI::queryCash() {
 
-	printInfo("Request account cash balance. ");
+/*
+void IBAPI::updateOrder(std::vector<std::string> ticker, double aggBps) {
 
-	EC->reqAccountSummary(9001, "All", "$LEDGER");
-
-	int count = 0;
-
-	while (!EW.b_accSummary) {
-		Sleep(100);
-		count++;
-		if (count > 100) {
-			std::cout << "Request cash balance time out. Break." << std::endl;
-			break;
-		}
-	}
-
-	EC->cancelAccountSummary(9001);
-
-	return EW.cashBalance;
 }
-
-std::vector<STOCK_ORD> IBAPI::getCSV(std::string str) {
-
-	//Assume the csv file format: tick, score, price, share
-
-	std::ifstream file(str);
-	std::vector<std::string> row;
-	std::vector <STOCK_ORD> orderCSV;
-	STOCK_ORD tmpOrd;
-	int count = 0;
-	/*
-	if (!file.is_open()) {
-		std::cout << "Cannot open file: " << str << ". Break." << std::endl;
-		return "0";
-	}
-	*/
-	
-	for (CSVIterator loop(file); loop != CSVIterator(); ++loop)
-	{
-		// Get rid of the first row (usually header). Save data from the second row.
-		if (count != 0){
-			std::string ticker = (*loop)[0];
-			double price = std::stod((*loop)[2]);
-			int share = std::stoi((*loop)[1]) > 0 ? std::stoi((*loop)[3]) : -std::stoi((*loop)[3]);
-
-			tmpOrd = { ticker, price, share };
-
-			orderCSV.push_back(tmpOrd);
-		}
-		count++;
-	}
-	
-	return orderCSV;
-}
+*/

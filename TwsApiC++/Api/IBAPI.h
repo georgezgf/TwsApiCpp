@@ -25,15 +25,21 @@ public:
 	void printInfo(std::string info);
 	std::vector<STOCK_ORD> getCSV(std::string str);
 
-	//QUOTE_DATA queryQuote(std::string tickerList);
+	void waitForNextValidId();
+	int queryNextOrderId();
 	std::map<std::string, QUOTE_DATA> queryQuote(std::vector<std::string> tickerList);
 	std::vector<STOCK_POS> queryPos();
-	std::vector<OPEN_ORD> queryOrd();
+	std::map<int, COMB_OPENORD> queryOrd();
+	int queryCash();
+	std::map<int, COMB_OPENORD> sendLmtOrder(std::vector<STOCK_ORD> lmtOrder);
 
-	std::vector<int> sendLmtOrder(std::vector<STOCK_ORD> lmtOrder);
+
+	/********************************************************/
+	/*The following are more advanced functions*/
+
 	void closeAllPos();
 	void openMktLmt(std::vector<STOCK_ORD> lmtOrder);	//Send limit orders around open time according to bid(ask) price for BUY(SELL)
-	int queryCash();
+	void updateOrder(std::vector<std::string> ticker, double aggBps);
 };
 
 

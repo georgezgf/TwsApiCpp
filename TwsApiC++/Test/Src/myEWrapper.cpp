@@ -35,18 +35,11 @@ MyEWrapper::MyEWrapper() : EWrapperL0(true) {
 	b_openOrdReady = false;
 	b_accSummary = false;
 	n_quote = 0;
-	n_openOrder = 0;
+	m_orderId = -1;
 	
 	tickData.resize(30); 
 }
-//MyEWrapper( bool CalledFromThread = true ): EWrapperL0( CalledFromThread ). Use default tread true constructor.
-
-void MyEWrapper::waitForNextValidId() {
-	while (!b_nextValidId) {
-		std::cout << "nextValidId is not ready." << std::endl;
-		Sleep(1000);
-	}
-}
+//MyEWrapper( bool CalledFromThread = true ): EWrapperL0( CalledFromThread ). Use default thread true constructor.
 
 void MyEWrapper::init_tickData() {
 	size_t size = tickData.size();
@@ -171,7 +164,7 @@ void MyEWrapper::nextValidId(OrderId orderId)
 {
 	b_nextValidId = true;
 	m_orderId = orderId;
-	PrintProcessId, printf("nextValidId = %ld\n", m_orderId);
+	//PrintProcessId, printf("nextValidId = %ld\n", m_orderId);
 }
 
 void MyEWrapper::openOrder(OrderId orderId, const Contract& contract, const Order& order, const OrderState& orderState)
@@ -180,18 +173,19 @@ void MyEWrapper::openOrder(OrderId orderId, const Contract& contract, const Orde
 	PrintProcessId, printf("OpenOrder. ID: %ld, %s, %s @ %s: %s, %s, %ld, %s\n", orderId, contract.symbol.c_str(), contract.secType.c_str(), contract.exchange.c_str(), \
 		order.action.c_str(), order.orderType.c_str(), order.totalQuantity, orderState.status.c_str());
 		
-	OPEN_ORD tmpOrd = { orderId, contract.symbol.c_str(), order.action.c_str(), order.totalQuantity };
-	openOrd.push_back(tmpOrd);
-	n_openOrder++;
+	OPEN_ORD tmpOrd = { contract.symbol.c_str(), order.action.c_str(), order.totalQuantity };
+	combOpenOrd[orderId].openOrd = tmpOrd;
 }
 
 void MyEWrapper::orderStatus(OrderId orderId, const IBString& status, int filled, int remaining, double avgFillPrice, int permId, int parentId, \
 	double lastFillPrice, int clientId, const IBString& whyHeld)
 {
-	/*
+	
 	PrintProcessId, printf("OrderStatus. ID: %ld, Status: %s, Filled: %d, Remaining: %d, AvgFillPrice: %g, PermId: %d, LastFillPrice: %g, ClientId: %d, WhyHeld: %s\n", \
 		orderId, status.c_str(), filled, remaining, avgFillPrice, permId, lastFillPrice, clientId, whyHeld.c_str());
-		*/
+
+	ORD_STATUS tmpStatus = { status.c_str() , filled ,remaining, avgFillPrice, lastFillPrice, clientId};
+	combOpenOrd[orderId].ordStatus = tmpStatus;
 }
 
 void MyEWrapper::openOrderEnd()
@@ -272,257 +266,4 @@ void MyEWrapper::accountSummaryEnd(int reqId)
 {
 	//printf("AccountSummaryEnd. Req Id: %d\n", reqId);
 	b_accSummary = true;
-}
-
-
-
-//----------------------------------------------------------------------------
-// TestEnums
-//----------------------------------------------------------------------------
-void TestEnums(void)
-{
-	IBString			id = *TickTypes::Bid;
-	id = *OrderStatus::PendingCancel;
-
-	IBString			y;
-	y = *TriggerMethod::LastPrice;
-
-	OrderStatus::ENUMS	e;
-	if (e *= "PendingCancel")
-	{
-		printf("OK\t");
-	}
-	else
-	{
-		printf("NOK\t");
-	}
-	printf("%4d %s\n", e, *e);
-
-
-	if (e *= "not a status")
-	{
-		printf("OK\t");
-	}
-	else
-	{
-		printf("NOK\t");
-	}
-	printf("%4d %s\n", e, *e);
-
-	switch (OrderStatus("PendingCancelxxxx"))
-	{
-	case OrderStatus::PendingCancel:
-	{ printf("OK\n"); } break;
-	case OrderStatus::_INVALID_:
-	{ printf("NOK\n"); } break;
-	default:
-	{ printf("??\n"); } break;
-	}
-
-	// The iterator has a similar interface as the of the std::map
-	for (UpdateAccountValueKey::iterator ac = UpdateAccountValueKey::begin(); ac != UpdateAccountValueKey::end(); ++ac)
-		printf("%4d %s\n", ac->first, ac->second);
-
-}
-
-
-
-//----------------------------------------------------------------------------
-// Marco TEST
-// Prints out the statement before executing it.
-// Used just to demonstrate the api: you see the statement, and then the result
-// i.e.: TEST(id, EC->reqMktData( id, C, "", false ) );
-// Without TEST: EC->reqMktData( id, C, "", false );
-//----------------------------------------------------------------------------
-#define TEST( T, X ) ( printf( "T%7d %s\n", T, #X ), X )
-
-//----------------------------------------------------------------------------
-// main
-//----------------------------------------------------------------------------
-
-
-struct Contract_ : public Contract
-{
-	Contract_(IBString sb, IBString st, IBString cr, IBString ex, IBString pr_ex)
-		: Contract()
-	{
-		symbol = sb;
-		secType = st;		//"STK"
-		currency = cr;
-		exchange = ex;	  	//"SMART";
-		primaryExchange = pr_ex;	//"ISLAND";
-	}
-};
-
-//Contract_			C("AAPL", *SecType::STK, "USD", *Exchange::IB_SMART, *Exchange::ISLAND);
-
-int mainM(void)
-{
-	printf("APIVersion    = %s\n", EClientL0::apiVersion());
-
-	//	TestEnums();
-
-	//Contract_			C( "MSFT", *SecType::STK, "USD", *Exchange::IB_SMART );
-
-	/*
-	Contract			C;
-	C.symbol			= "MSFT";
-	C.secType			= *SecType::STK;		//"STK"
-	C.currency			= "USD";
-	C.exchange			= *Exchange::IB_SMART;	//"SMART";
-	//	C.primaryExchange	= *Exchange::AMEX;
-	*/
-	// from version 9.63 on, the protected ewrapper is active by default
-	MyEWrapper	MW;
-	EClientL0*	EC = EClientL0::New(&MW);
-
-	std::vector<std::string> tickerList = { "AAPL","FB","AMZN" };
-
-	printf("ClientVersion = %d\n", EC->clientVersion());
-
-	std::cout << "nextValidId? = " << MW.b_nextValidId << std::endl;
-
-	TEST(0, EC->eDisconnect());	// only for test purposes
-
-	if (TEST(0, EC->eConnect("", 7497, 100)))
-	{
-		PrintProcessId, printf("ServerVersion = %d\n", EC->serverVersion());
-
-		// pause the program until nextValidId is ready
-		MW.waitForNextValidId();
-
-		//		EC->reqNewsBulletins( true );
-		//		EC->reqNewsBulletins( true );
-		
-		//TEST( 0, EC->reqAccountUpdates( true, "" ) );
-		
-
-		//		for( int i = 0; i < 60; i++ )
-		//TEST( 100, EC->reqMktData( 100, C, "", false ) );
-		/*
-		EC->reqMktDepth( 11, C, 3 );
-		*/
-		/*
-		EC->reqHistoricalData
-		(20
-			, C
-			, EndDateTime(2014, 8, 4)
-			, DurationStr(1, *DurationHorizon::Days)
-			, *BarSizeSetting::_1_hour
-			, *WhatToShow::TRADES
-			, true
-			, FormatDate::AsDate
-		);
-		*/
-		
-		TEST(0, EC->reqMktData(0, ContractSamples::USStock("AAPL"),"", false));
-
-		//TEST(55, EC->placeOrder(MW.m_orderId++, C, OrderSamples::LimitOrder("SELL", 300, 40)));
-		//TEST(55, EC->placeOrder(MW.m_orderId++, C, OrderSamples::LimitOrder("BUY", 120, 935)));
-
-		//TEST(40, EC->reqOpenOrders());
-
-		TEST(41, EC->reqPositions());
-
-
-		//TEST(55, EC->placeOrder(MW.m_orderId++, ContractSamples::USStock("NVDA"), OrderSamples::LimitOrder("BUY", 300, 400)));
-		//TEST(42, EC->reqPositions());
-
-		//TEST(11, EC->reqGlobalCancel());
-
-		//TEST(41, EC->reqGlobalCancel());
-
-		//TEST(42, EC->reqOpenOrders());
-
-		/*
-	
-		EC->reqHistoricalData
-		( 20//EC->GetNextValidId()
-		, C
-		, EndDateTime(2006,10,03), DurationStr(1, DH_Days), *BarSizeSetting::_1_secs
-		, *WS_TRADES
-		, true
-		, FD_AsDate
-		);
-		*/
-
-		/*
-
-		{
-			Contract C;
-			C.symbol = "FB";
-			C.secType = *SecType::OPT;		//"STK"
-			C.currency = "USD";
-			C.exchange = *Exchange::IB_SMART;	//"SMART";
-			EC->reqContractDetails(25, C);
-
-
-			//		EC->reqContractDetails( C );
-		}
-		*/
-
-		/*  QQQQ
-		C.symbol	= "DNEX";
-		EC->reqContractDetails( C );
-
-		C.symbol	= "MSFT";
-		EC->reqContractDetails( C );
-		*/
-	}
-
-	int id = 1;
-	while (id++ < 1000)
-	{
-		//	if( !MW.IsCalledFromThread() ) EC->checkMessages();
-		Sleep(100);
-
-		/* for 'stress' testing */
-		//if (0 == id % 50)
-			//TEST(id, EC->reqMktData( id, C, "", false ) );
-			/**/
-			//if (30 == id)
-				//TEST(id, EC->eDisconnect());
-		/**/
-		//if (40 == id)
-			//TEST(id, EC->eDisconnect());
-
-
-		//if (60 == id || 70 == id)
-			//TEST(id, EC->reqMktData(id, ContractSamples::USStock("AAPL"), "", false));	// will fail of course
-
-
-		//if (130 == id)
-			//TEST(id, EC->eConnect("", 7497, 10));
-
-		//if (150 == id)
-			//TEST(id, EC->eConnect("", 7497, 10));		// raises already connected error
-
-		if (190 == id)
-			TEST(id,
-				EC->reqHistoricalData
-				(id
-					, ContractSamples::USStock("NVDA")
-					, EndDateTime(2015, 02, 20), DurationStr(1, *DurationHorizon::Days), *BarSizeSetting::_1_hour
-					, *WhatToShow::TRADES
-					, true
-					, FormatDate::AsDate
-				)
-			);
-
-		//if (200 == id)
-			//TEST(id, EC->reqMktData(id, ContractSamples::USStock("BABA"), "", false));
-
-		/**/
-		//if (800 == id)
-			//TEST(id, EC->cancelMktData(200));
-		/**/
-	}
-
-
-	TEST(0, EC->eDisconnect());
-
-	delete EC;
-
-	{ PrintProcessId, printf("Press return to end\n"); char s[10]; gets_s(s); }
-	return 0;
 }

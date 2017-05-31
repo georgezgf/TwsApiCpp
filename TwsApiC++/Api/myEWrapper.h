@@ -5,6 +5,7 @@
 #include "myStruct.h"
 
 #include <iostream>
+#include <map>
 
 class MyEWrapper : public EWrapperL0
 {
@@ -19,17 +20,17 @@ public:
 	int n_quote;		// Record how many time tickprice and ticksize functions are called. 
 						// For example, if query 3 stocks, m_quoteReady = 3*4(askprice,bidprice,asksize,bidsize)=12 means query quote ready. 
 
-	int n_openOrder;	// For sendLMTorder function, record how many times openOrder function are called by the API
+	//int n_openOrder;	// For sendLMTorder function, record how many times openOrder function are called by the API
 
 	std::vector<QUOTE_DATA> tickData;	//Record quote data for queryQuote function
 	std::vector<std::string> tickerList;
 	std::vector<STOCK_POS> stockPos;
-	std::vector<OPEN_ORD> openOrd;
+	std::map<int, COMB_OPENORD> combOpenOrd;
 	int cashBalance;
 
 	MyEWrapper();
 
-	void waitForNextValidId();
+	
 	void init_tickData();	// Initilize the tickData vector to zero
 
 	// Implementation of EwrapperL0

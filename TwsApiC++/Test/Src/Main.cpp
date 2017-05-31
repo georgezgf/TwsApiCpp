@@ -30,11 +30,12 @@ int main(void)
 		PrintProcessId, printf("ServerVersion = %d\n", testAPI.EC->serverVersion());
 
 		// pause the program until nextValidId is ready
-		testAPI.EW.waitForNextValidId();
+		testAPI.waitForNextValidId();
 
 		std::map<std::string, QUOTE_DATA> quoteMap;
 		std::vector<STOCK_POS> stockPos;
-		std::vector<OPEN_ORD> open_Ord;
+		//std::vector<OPEN_ORD> open_Ord;
+		std::map<int, COMB_OPENORD> combOrd;
 		/*
 		quoteMap = testAPI.queryQuote(tickerList);
 
@@ -45,36 +46,47 @@ int main(void)
 		}
 		
 		*/
-		std::vector<STOCK_ORD> testOrder = { {"TWTR",124,100},{"FB",40,-200},{"AMZN",1000,100} };
+		std::vector<STOCK_ORD> testOrder = { {"TWTR",18.4,100},{"FB",40,-200},{"AMZN",998,100} };
 		
-		std::vector<int> orderIdList = testAPI.sendLmtOrder(testOrder);		
-
+		combOrd = testAPI.sendLmtOrder(testOrder);
+		/*
 		for (int i = 0; i < orderIdList.size(); i++) {
 			std::cout << "orderId = " << orderIdList[i] << std::endl;
 		}
-		
+		*/
 		stockPos = testAPI.queryPos();
-
 
 		std::cout << "Position size =" << stockPos.size() << std::endl;
 
 		for (int i = 0; i < stockPos.size(); i++) {
 			std::cout << "Ticker: " << stockPos[i].ticker << ". Position: " << stockPos[i].posQty << ". Avg cost: " << stockPos[i].avgCost << std::endl;
 		}
+		
+		//combOrd = testAPI.queryOrd();
+
+		std::cout << "Open order size =" << combOrd.size() << std::endl;
+
+		for (std::map<int, COMB_OPENORD>::iterator it = combOrd.begin(); it != combOrd.end(); ++it) {
+			std::cout << it->first << " => " << (it->second).openOrd.ticker <<" action:"<<  (it->second).openOrd.action << " totalQty: "<< (it->second).openOrd.totalQty
+				<<". Remaining: " << (it->second).ordStatus.remaining << ". ClientId: " << (it->second).ordStatus.clientId <<"\n";
+			
+		}
+
 		/*
-		open_Ord = testAPI.queryOrd();
-
-		std::cout << "Open order size =" << open_Ord.size() << std::endl;
-
 		for (int i = 0; i <open_Ord.size(); i++) {
 			std::cout << "Ticker: " << open_Ord[i].ticker << ". Quantity: " << open_Ord[i].totalQty 
 				<< ". Action: " << open_Ord[i].action << ". OrderId = "<< open_Ord[i].OrderId <<std::endl;
 		}
 		*/
-		int cash = testAPI.queryCash();
 
+		int nextOrderId = testAPI.queryNextOrderId();
+
+		std::cout << "nextOrderId = " << nextOrderId << std::endl;
+
+		/*
+		int cash = testAPI.queryCash();
 		std::cout << "Cash = " << cash << std::endl;
-	
+	*/
 		/*
 		std::vector<STOCK_ORD> orderCSV = testAPI.getCSV("D:\\Dropbox\\Public\\Finance\\sendOrd_test.csv");
 
