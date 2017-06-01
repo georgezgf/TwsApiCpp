@@ -34,9 +34,8 @@ int main(void)
 
 		std::map<std::string, QUOTE_DATA> quoteMap;
 		std::vector<STOCK_POS> stockPos;
-		//std::vector<OPEN_ORD> open_Ord;
 		std::map<int, COMB_OPENORD> combOrd;
-		/*
+		
 		quoteMap = testAPI.queryQuote(tickerList);
 
 		for (int i = 0; i < tickerList.size(); i++) {
@@ -45,15 +44,18 @@ int main(void)
 				<< ". Bid size: " << quoteMap[tickerList[i]].bidSize[0] << std::endl;
 		}
 		
-		*/
-		std::vector<STOCK_ORD> testOrder = { {"TWTR",18.4,100},{"FB",40,-200},{"AMZN",998,100} };
 		
-		combOrd = testAPI.sendLmtOrder(testOrder);
+		std::vector<STOCK_ORD> testOrder = { {"TSLA",335.5,100},{"AAPL",155,-200},{"PLCE",106.5,100} };
 		/*
+		std::vector<int> orderIdList = testAPI.sendLmtOrder(testOrder);
+		
 		for (int i = 0; i < orderIdList.size(); i++) {
 			std::cout << "orderId = " << orderIdList[i] << std::endl;
 		}
 		*/
+
+
+		/*
 		stockPos = testAPI.queryPos();
 
 		std::cout << "Position size =" << stockPos.size() << std::endl;
@@ -61,8 +63,12 @@ int main(void)
 		for (int i = 0; i < stockPos.size(); i++) {
 			std::cout << "Ticker: " << stockPos[i].ticker << ". Position: " << stockPos[i].posQty << ". Avg cost: " << stockPos[i].avgCost << std::endl;
 		}
-		
-		//combOrd = testAPI.queryOrd();
+		*/
+
+		testAPI.updateOrder({ 144,146 },2);
+
+		/*
+		combOrd = testAPI.queryOrd();
 
 		std::cout << "Open order size =" << combOrd.size() << std::endl;
 
@@ -71,6 +77,7 @@ int main(void)
 				<<". Remaining: " << (it->second).ordStatus.remaining << ". ClientId: " << (it->second).ordStatus.clientId <<"\n";
 			
 		}
+		*/
 
 		/*
 		for (int i = 0; i <open_Ord.size(); i++) {
@@ -79,9 +86,6 @@ int main(void)
 		}
 		*/
 
-		int nextOrderId = testAPI.queryNextOrderId();
-
-		std::cout << "nextOrderId = " << nextOrderId << std::endl;
 
 		/*
 		int cash = testAPI.queryCash();
@@ -90,22 +94,12 @@ int main(void)
 		/*
 		std::vector<STOCK_ORD> orderCSV = testAPI.getCSV("D:\\Dropbox\\Public\\Finance\\sendOrd_test.csv");
 
-
 		for (int i = 0; i < orderCSV.size(); i++) {
 			std::cout << "Ticker: " <<  orderCSV[i].ticker <<  ". Price: "<< orderCSV[i].orderPrice << ". Qty: "<< orderCSV[i].orderQty<<std::endl;
 		}
 		*/
-		testAPI.EC->reqGlobalCancel();
 
-		//testAPI.sendLmtOrder(orderCSV);
-
-		//std::vector<std::string> results = testAPI.getCSV(file);
-
-		//std::cout << "csv string: " << results.size() << std::endl;
-
-
-		//testAPI.closeAllPos();
-		//testAPI.openMktLmt(testOrder);
+		//testAPI.EC->reqGlobalCancel();
 		
 	}
 	

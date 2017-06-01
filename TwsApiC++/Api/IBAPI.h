@@ -31,15 +31,15 @@ public:
 	std::vector<STOCK_POS> queryPos();
 	std::map<int, COMB_OPENORD> queryOrd();
 	int queryCash();
-	std::map<int, COMB_OPENORD> sendLmtOrder(std::vector<STOCK_ORD> lmtOrder);
+	std::vector<int> sendLmtOrder(std::vector<STOCK_ORD> lmtOrder);
 
 
 	/********************************************************/
 	/*The following are more advanced functions*/
 
-	void closeAllPos();
-	void openMktLmt(std::vector<STOCK_ORD> lmtOrder);	//Send limit orders around open time according to bid(ask) price for BUY(SELL)
-	void updateOrder(std::vector<std::string> ticker, double aggBps);
+	std::vector<int> closeAllPos();
+	std::vector<int> openMktLmt(std::vector<STOCK_ORD> lmtOrder);	//Send limit orders around open time according to bid(ask) price for BUY(SELL)
+	void updateOrder(std::vector<int> orderIdList, double aggBps);
 };
 
 

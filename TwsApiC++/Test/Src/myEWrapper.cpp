@@ -169,10 +169,10 @@ void MyEWrapper::nextValidId(OrderId orderId)
 
 void MyEWrapper::openOrder(OrderId orderId, const Contract& contract, const Order& order, const OrderState& orderState)
 {
-	
+	/*
 	PrintProcessId, printf("OpenOrder. ID: %ld, %s, %s @ %s: %s, %s, %ld, %s\n", orderId, contract.symbol.c_str(), contract.secType.c_str(), contract.exchange.c_str(), \
 		order.action.c_str(), order.orderType.c_str(), order.totalQuantity, orderState.status.c_str());
-		
+		*/
 	OPEN_ORD tmpOrd = { contract.symbol.c_str(), order.action.c_str(), order.totalQuantity };
 	combOpenOrd[orderId].openOrd = tmpOrd;
 }
@@ -180,10 +180,10 @@ void MyEWrapper::openOrder(OrderId orderId, const Contract& contract, const Orde
 void MyEWrapper::orderStatus(OrderId orderId, const IBString& status, int filled, int remaining, double avgFillPrice, int permId, int parentId, \
 	double lastFillPrice, int clientId, const IBString& whyHeld)
 {
-	
+	/*
 	PrintProcessId, printf("OrderStatus. ID: %ld, Status: %s, Filled: %d, Remaining: %d, AvgFillPrice: %g, PermId: %d, LastFillPrice: %g, ClientId: %d, WhyHeld: %s\n", \
 		orderId, status.c_str(), filled, remaining, avgFillPrice, permId, lastFillPrice, clientId, whyHeld.c_str());
-
+		*/
 	ORD_STATUS tmpStatus = { status.c_str() , filled ,remaining, avgFillPrice, lastFillPrice, clientId};
 	combOpenOrd[orderId].ordStatus = tmpStatus;
 }
