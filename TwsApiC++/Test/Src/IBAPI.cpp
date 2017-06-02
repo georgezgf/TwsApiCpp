@@ -16,6 +16,9 @@ IBAPI::~IBAPI() {
 	std::cout << "EC pointer has been deleted." << std::endl;
 }
 
+/**********************************************************************************************************/
+/*General functions*/
+
 void IBAPI::printInfo(std::string info) {
 	std::cout << std::endl;
 	std::cout << std::left << std::setfill('*')<<std::setw(40)<< info <<std::endl;
@@ -55,6 +58,26 @@ std::vector<STOCK_ORD> IBAPI::getCSV(std::string str) {
 	return orderCSV;
 }
 
+double IBAPI::roundNum(double num, double minTick) {
+	int inum = int(round(num * 100));
+	int iminTick = int(minTick * 100);
+	
+	int remain = inum % iminTick;
+
+	//std::cout << "remain = " << remain << std::endl;
+
+	if (remain == 0) {
+		return double(inum) / 100;
+	}
+	
+	inum = remain < double(iminTick) / 2 ? inum - remain : inum + iminTick - remain;
+	return double(inum) / 100;
+	
+}
+
+/**********************************************************************************************************/
+/*basic trade functions*/
+
 void IBAPI::waitForNextValidId() {
 	while (!EW.b_nextValidId) {
 		std::cout << "nextValidId is not ready." << std::endl;
@@ -83,6 +106,29 @@ int IBAPI::queryNextOrderId() {
 }
 
 
+double IBAPI::queryMinTick(std::string ticker) {
+
+	printInfo("Query minimum tick. ");
+
+	EW.minTick=0;
+	EW.b_ctrDetail = false;
+
+	//int reqId = 8000;
+	int count = 0;
+
+	EC->reqContractDetails(0, ContractSamples::USStock(ticker));
+
+	while (!EW.b_ctrDetail) {
+		Sleep(100);
+		count++;
+		if (count > 50) {
+			std::cout << "Request minimum tick time out. Break." << std::endl;
+			break;
+		}
+	}
+	return EW.minTick;
+}
+
 std::map<std::string, QUOTE_DATA> IBAPI::queryQuote(std::vector<std::string> tickerList) {
 
 	printInfo("Query Quote. ");
@@ -97,18 +143,23 @@ std::map<std::string, QUOTE_DATA> IBAPI::queryQuote(std::vector<std::string> tic
 
 	// Check if every data is read
 	bool Ready = false;
+	bool tmp;
 	int count = 0;
 
 	while (!Ready) {
+		Ready = true;
 		Sleep(100);
 		count++;
 		for (int i = 0; i < tickerList.size(); i++) {
-			// Check if all data in tickData is ready.
-			Ready = (EW.n_quote >= tickerList.size()*4);	// 4 items to record for each stock: bidprice, askprice, bidsize, asksize.
-			//std::cout << "Ready = " << Ready << std::endl;
-			//std::cout << "n_quote = " << EW.n_quote << std::endl;
-			//std::cout << "tickerlist size = " << tickerList.size() << std::endl;
+			// Check if all data in tickData is ready. For every tickerId, need every entry(askprice, bidprice, asksize, bidsize) to be called at least once
+			tmp = (EW.n_quoteStatus[i].n_askprice > 0 & EW.n_quoteStatus[i].n_bidprice > 0 & EW.n_quoteStatus[i].n_asksize > 0 & EW.n_quoteStatus[i].n_bidsize > 0);
+			
+			//std::cout <<"tickerId = " << i << ". n_askprice, n_bidprice, n_asksize, n_bidsize = " << EW.n_quoteStatus[i].n_askprice << EW.n_quoteStatus[i].n_bidprice
+				//<< EW.n_quoteStatus[i].n_asksize << EW.n_quoteStatus[i].n_bidsize << std::endl;
+			Ready = Ready & tmp;
 		}
+		//std::cout << "Ready = " << Ready << std::endl;
+
 		if (count > 100) {
 			std::cout << "Request market data time out. Break." << std::endl;
 			break;
@@ -221,7 +272,7 @@ std::vector<int> IBAPI::sendLmtOrder(std::vector<STOCK_ORD> lmtOrder) {
 		Sleep(100);
 		count++;
 		if (count > 20) {
-			std::cout << "Request open order time out. Break." << std::endl;
+			std::cout << "Open order call back time out. Break." << std::endl;
 			break;
 		}
 	}
@@ -235,10 +286,42 @@ std::vector<int> IBAPI::sendLmtOrder(std::vector<STOCK_ORD> lmtOrder) {
 	return orderIdList;
 }
 
+std::vector<int> IBAPI::modifyLmtOrder(std::vector<MODIFY_ORD> updateOrd) {
+
+	printInfo("Update limit orders. ");
+	EW.combOpenOrd.clear();
+	EW.b_openOrdReady = false;
+
+	std::string action;
+	std::vector<int> orderIdList;
+	int count = 0;
+
+	for (int i = 0; i < updateOrd.size(); i++) {
+		action = updateOrd[i].orderQty > 0 ? "BUY" : "SELL";
+		EC->placeOrder(updateOrd[i].orderId, ContractSamples::USStock(updateOrd[i].ticker), OrderSamples::LimitOrder(action, abs(updateOrd[i].orderQty), updateOrd[i].orderPrice));
+	}
+
+	while (!EW.b_openOrdReady) {
+		Sleep(100);
+		count++;
+		if (count > 20) {
+			std::cout << "Open order call back time out. Modify limit orders fail. Break." << std::endl;
+			break;
+		}
+	}
+
+	for (std::map<int, COMB_OPENORD>::iterator it = EW.combOpenOrd.begin(); it != EW.combOpenOrd.end(); ++it) {
+		orderIdList.push_back(it->first);
+	}
+
+	std::cout << "Update limit order finish. Submit order size = " << orderIdList.size() << std::endl;
+
+	return orderIdList;
+}
 
 
-/********************************************************/
-/*The following are more advanced functions*/
+/**********************************************************************************************************/
+/*advance trade functions*/
 
 
 std::vector<int> IBAPI::closeAllPos() {
@@ -324,55 +407,81 @@ void IBAPI::updateOrder(std::vector<int> orderIdList, double aggBps) {
 	printInfo("Update orders. ");
 	std::cout << "Input aggBps =" << aggBps << std::endl;
 
+	std::vector<int> myOrderIdList;
 	std::map<int, COMB_OPENORD> allOrd, myOrd;
 	std::map<int, COMB_OPENORD>::iterator it0;
 	std::vector<std::string> tickerList;	//tickerlist for request the latest bid/ask
-	std::vector<STOCK_ORD> orderUpdate;		//stock order for update
+	std::vector<MODIFY_ORD> orderUpdate;		//stock order for update
 	std::map<std::string, QUOTE_DATA> quoteData;
+	double minTick;
+	double spreadBps;
+	double bid;
+	double ask;
+	double myBps;
 
-	allOrd = queryOrd();
+	myOrderIdList = orderIdList;
+
+	allOrd = queryOrd();	//request all open orders
 
 	//find the remaining open orders in orderIdList from all the request open order
-	for (int i = 0; i < orderIdList.size(); i++) {
-		it0 = allOrd.find(orderIdList[i]);
+	for (int i = 0; i < myOrderIdList.size(); i++) {
+		it0 = allOrd.find(myOrderIdList[i]);
 		if (it0 != allOrd.end()) {
+			minTick = queryMinTick(it0->second.openOrd.ticker);
 			myOrd.insert(*it0);
 			tickerList.push_back(it0->second.openOrd.ticker);
 			int remQty = it0->second.openOrd.action == "BUY" ? it0->second.ordStatus.remaining : -it0->second.ordStatus.remaining;	//if action="BUY", set quantity positive; otherwise negative
-			orderUpdate.push_back({ it0->second.openOrd.ticker, -2, remQty});	//set the updateorder price to -1 for now
+			orderUpdate.push_back({ it0->first,it0->second.openOrd.ticker, -2, remQty, minTick });	//set the updateorder price to -2 for now
 		}
 	}
 
-	std::cout << "Remain open order size: " << myOrd.size() << std::endl;
-	
-	for (std::map<int, COMB_OPENORD>::iterator it = myOrd.begin(); it != myOrd.end(); ++it) {
-		std::cout << it->first << " => " << (it->second).openOrd.ticker << " action:" << (it->second).openOrd.action << " totalQty: " << (it->second).openOrd.totalQty
-			<< ". Remaining: " << (it->second).ordStatus.remaining << ". ClientId: " << (it->second).ordStatus.clientId << "\n";
-	}
+	do {
+		std::cout << "\n" << "Remain open order size: " << myOrd.size() << std::endl;
 
-	for (int i = 0; i < orderUpdate.size(); i++) {
-		std::cout << "ticker: " << orderUpdate[i].ticker << ". price: " << orderUpdate[i].orderPrice << " quantity: " << orderUpdate[i].orderQty << std::endl;
-	}
+		for (std::map<int, COMB_OPENORD>::iterator it = myOrd.begin(); it != myOrd.end(); ++it) {
+			std::cout << it->first << " => " << (it->second).openOrd.ticker << " action:" << (it->second).openOrd.action << " totalQty: " << (it->second).openOrd.totalQty
+				<< ". Remaining: " << (it->second).ordStatus.remaining << ". ClientId: " << (it->second).ordStatus.clientId << "\n";
+		}
 
-	quoteData = queryQuote(tickerList);
+		quoteData = queryQuote(tickerList);
 
-	for (int i = 0; i < tickerList.size(); i++) {
-		//orderQty>0: BUY, update price = bid price + aggbps; orderQty<0: SELL, update price = ask price - aggbps
-		orderUpdate[i].orderPrice = orderUpdate[i].orderQty>0 ?	quoteData[tickerList[i]].bidPrice[0] * (1+aggBps/10000) : quoteData[tickerList[i]].askPrice[0] * (1-aggBps/10000);
-		std::cout << "ticker: " << orderUpdate[i].ticker << ". update price: " << orderUpdate[i].orderPrice << std::endl;
-	}
+		for (int i = 0; i < tickerList.size(); i++) {
 
-	/*
-	while (myOrd.size() > 0) {
-		std::cout << "Remain open order size: " << myOrd.size() << std::endl;
+			spreadBps = (quoteData[tickerList[i]].askPrice[0] - quoteData[tickerList[i]].bidPrice[0]) / quoteData[tickerList[i]].bidPrice[0] * 10000;
+
+			//if spreadBps is less than the input Bps, use spreadBps (update price to bid/ask for SELL/BUY)
+			myBps = spreadBps < aggBps ? spreadBps : aggBps;
+
+			//orderQty>0: BUY, update price = bid price + aggbps; orderQty<0: SELL, update price = ask price - aggbps
+			bid = roundNum(quoteData[tickerList[i]].bidPrice[0] * (1 + myBps / 10000), orderUpdate[i].minTick);	//round price to two digits after decimal and the minTick
+			ask = roundNum(quoteData[tickerList[i]].askPrice[0] * (1 - myBps / 10000), orderUpdate[i].minTick);
+			orderUpdate[i].orderPrice = orderUpdate[i].orderQty>0 ? bid :ask;
+
+			std::cout << "ticker: " << orderUpdate[i].ticker << ". Spread bps = " << spreadBps << ". mybps = " << myBps
+				<< ". update price: " << orderUpdate[i].orderPrice << " quantity: " << orderUpdate[i].orderQty << std::endl;
+		}
+
+		myOrderIdList = modifyLmtOrder(orderUpdate);
+
+		Sleep(5000);	//wait 5s for order to fill
+
+		allOrd.clear();
+		myOrd.clear();
+		orderUpdate.clear();
 
 		allOrd = queryOrd();
-		for (int i = 0; i < orderIdList.size(); i++) {
-			it = allOrd.find(orderIdList[i]);
-			myOrd.insert(*it);
+
+		//find the remaining open orders in orderIdList from all the request open order
+		for (int i = 0; i < myOrderIdList.size(); i++) {
+			it0 = allOrd.find(myOrderIdList[i]);
+			if (it0 != allOrd.end()) {
+				myOrd.insert(*it0);
+				tickerList.push_back(it0->second.openOrd.ticker);
+				int remQty = it0->second.openOrd.action == "BUY" ? it0->second.ordStatus.remaining : -it0->second.ordStatus.remaining;	//if action="BUY", set quantity positive; otherwise negative
+				orderUpdate.push_back({ it0->first,it0->second.openOrd.ticker, -2, remQty });	//set the updateorder price to -1 for now
+			}
 		}
-		quoteData = queryQuote(tickerList);
-	}
-	*/
+
+	} while (myOrd.size() > 0);
 
 }

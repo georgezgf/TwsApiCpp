@@ -39,8 +39,23 @@ struct STOCK_ORD {
 	int orderQty;
 };
 
+struct MODIFY_ORD {
+	int orderId;
+	std::string ticker;
+	double orderPrice;
+	int orderQty;
+	double minTick;
+};
+
 struct STOCK_POS {
 	std::string ticker;
 	double avgCost;
 	int posQty;
+};
+
+struct N_QUOTE_STATUS {
+	int n_bidprice;
+	int n_askprice;
+	int n_bidsize;
+	int n_asksize;
 };

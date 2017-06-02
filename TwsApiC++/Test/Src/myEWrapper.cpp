@@ -34,9 +34,11 @@ MyEWrapper::MyEWrapper() : EWrapperL0(true) {
 	b_posReady = false;
 	b_openOrdReady = false;
 	b_accSummary = false;
-	n_quote = 0;
+	b_ctrDetail = false;
 	m_orderId = -1;
+	minTick = 0;
 	
+	n_quoteStatus.resize(30);
 	tickData.resize(30); 
 }
 //MyEWrapper( bool CalledFromThread = true ): EWrapperL0( CalledFromThread ). Use default thread true constructor.
@@ -45,7 +47,10 @@ void MyEWrapper::init_tickData() {
 	size_t size = tickData.size();
 	tickData.clear();
 	tickData.resize(size);
-	n_quote = 0;
+
+	size_t size1 = n_quoteStatus.size();
+	n_quoteStatus.clear();
+	n_quoteStatus.resize(size1);
 }
 
 
@@ -72,12 +77,12 @@ void MyEWrapper::tickPrice(TickerId tickerId, TickType field, double price, int 
 		switch (field) {
 		case BID: 
 			tickData[tickerId].bidPrice[0] = price; 
-			n_quote++;
+			n_quoteStatus[tickerId].n_bidprice++;
 			//std::cout << "bid = " << tickData[tickerId].bidPrice[0] << std::endl;
 			break;
 		case ASK: 
 			tickData[tickerId].askPrice[0] = price; 
-			n_quote++;
+			n_quoteStatus[tickerId].n_askprice++;
 			//std::cout << "ask = " << tickData[tickerId].askPrice[0] << std::endl;
 			break;
 		}
@@ -99,12 +104,12 @@ void MyEWrapper::tickSize(TickerId tickerId, TickType field, int size)
 	switch (field) {
 	case BID_SIZE:
 		tickData[tickerId].bidSize[0] = size; 
-		n_quote++;
+		n_quoteStatus[tickerId].n_bidsize++;
 		//std::cout << "bidSize = " << tickData[tickerId].bidSize[0] << std::endl;
 		break;
 	case ASK_SIZE:
 		tickData[tickerId].askSize[0] = size; 
-		n_quote++;
+		n_quoteStatus[tickerId].n_asksize++;
 		//std::cout << "askSize = " << tickData[tickerId].askSize[0] << std::endl;
 		break;
 	}
@@ -195,11 +200,22 @@ void MyEWrapper::openOrderEnd()
 }
 
 
-void MyEWrapper::contractDetails(const ContractDetails& contractDetails)
+void MyEWrapper::contractDetails(int reqId,const ContractDetails& contractDetails)
 {
-	const Contract& C = contractDetails.summary;
+	//const Contract& C = contractDetails.summary;
 
-	PrintProcessId, printf("CD: %10s %5s %8s, %5.2f\n", (const char*)C.localSymbol, (const char*)C.secType, (const char*)C.expiry, C.strike);
+	//std::cout << "min Tick = " << contractDetails.minTick << std::endl;
+	
+	minTick = contractDetails.minTick;
+	//PrintProcessId, printf("CD: %10s %5s %8s, %5.2f\n", (const char*)C.localSymbol, (const char*)C.secType, (const char*)C.expiry, C.strike);
+}
+
+void MyEWrapper::contractDetailsEnd(int reqId)
+{
+	//printf("ContractDetailsEnd. %d\n", reqId);
+	b_ctrDetail = true;
+	//std::cout << "n_ctrDetail = " << n_ctrDetail << std::endl;
+
 }
 
 void MyEWrapper::error(const int id, const int errorCode, const IBString errorString)

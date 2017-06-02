@@ -17,7 +17,7 @@ int main(void)
 
 	IBAPI testAPI;
 
-	std::vector<std::string> tickerList = { "AAPL","FB","AMZN" };
+	std::vector<std::string> tickerList = { "AAPL","PLCE","AMZN" };
 
 	printf("ClientVersion = %d\n", testAPI.EC->clientVersion());
 
@@ -65,7 +65,19 @@ int main(void)
 		}
 		*/
 
-		testAPI.updateOrder({ 144,146 },2);
+		//testAPI.updateOrder({ 145,146,147 },2);
+
+
+		//testAPI.EC->reqContractDetails(9002, ContractSamples::USStock("PLCE"));
+
+
+		for (int i = 0; i < tickerList.size(); i++) {
+			double minTick = testAPI.queryMinTick(tickerList[i]);
+			std::cout << "ticker: " << tickerList[i] << ". min Tick = " << minTick << std::endl;
+		}
+
+		std::cout << testAPI.roundNum(147.65222, 0.01) << std::endl;
+		//std::cout << 148 % 5 << "  " << 148/5<<std::endl;
 
 		/*
 		combOrd = testAPI.queryOrd();
