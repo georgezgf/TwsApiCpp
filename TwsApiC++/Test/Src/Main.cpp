@@ -44,16 +44,16 @@ int main(void)
 				<< ". Bid size: " << quoteMap[tickerList[i]].bidSize[0] << std::endl;
 		}
 		
-		
-		std::vector<STOCK_ORD> testOrder = { {"TSLA",335.5,100},{"AAPL",155,-200},{"PLCE",106.5,100} };
 		/*
+		std::vector<STOCK_ORD> testOrder = { {"TGI",1.8,100},{"PLCE",1.5,-200} };
+		
 		std::vector<int> orderIdList = testAPI.sendLmtOrder(testOrder);
 		
 		for (int i = 0; i < orderIdList.size(); i++) {
 			std::cout << "orderId = " << orderIdList[i] << std::endl;
 		}
+		
 		*/
-
 
 		/*
 		stockPos = testAPI.queryPos();
@@ -65,18 +65,18 @@ int main(void)
 		}
 		*/
 
-		//testAPI.updateOrder({ 145,146,147 },2);
-
+		testAPI.updateOrder({ 165,166 },2,5);
+		//std::cout << testAPI.queryMinTick("TGI") << std::endl;
 
 		//testAPI.EC->reqContractDetails(9002, ContractSamples::USStock("PLCE"));
 
-
+		/*
 		for (int i = 0; i < tickerList.size(); i++) {
 			double minTick = testAPI.queryMinTick(tickerList[i]);
 			std::cout << "ticker: " << tickerList[i] << ". min Tick = " << minTick << std::endl;
 		}
-
-		std::cout << testAPI.roundNum(147.65222, 0.01) << std::endl;
+		*/
+		//std::cout << testAPI.roundNum(147.65222, 0.01) << std::endl;
 		//std::cout << 148 % 5 << "  " << 148/5<<std::endl;
 
 		/*

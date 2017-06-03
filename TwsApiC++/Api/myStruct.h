@@ -40,7 +40,7 @@ struct STOCK_ORD {
 };
 
 struct MODIFY_ORD {
-	int orderId;
+	//int orderId;
 	std::string ticker;
 	double orderPrice;
 	int orderQty;

@@ -38,7 +38,7 @@ public:
 	std::map<int, COMB_OPENORD> queryOrd();
 	int queryCash();
 	std::vector<int> sendLmtOrder(std::vector<STOCK_ORD> lmtOrder);
-	std::vector<int> modifyLmtOrder(std::vector<MODIFY_ORD> updateOrder);
+	std::vector<int> modifyLmtOrder(std::map<int, MODIFY_ORD> updateOrder);
 	double queryMinTick(std::string ticker);
 
 
@@ -46,7 +46,7 @@ public:
 	/*advance trade functions*/
 	std::vector<int> closeAllPos();
 	std::vector<int> openMktLmt(std::vector<STOCK_ORD> lmtOrder);	//Send limit orders around open time according to bid(ask) price for BUY(SELL)
-	void updateOrder(std::vector<int> orderIdList, double aggBps);
+	void updateOrder(std::vector<int> orderIdList, double aggBps, int waitTime_s);
 };
 
 

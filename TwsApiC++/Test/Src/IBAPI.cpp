@@ -286,7 +286,7 @@ std::vector<int> IBAPI::sendLmtOrder(std::vector<STOCK_ORD> lmtOrder) {
 	return orderIdList;
 }
 
-std::vector<int> IBAPI::modifyLmtOrder(std::vector<MODIFY_ORD> updateOrd) {
+std::vector<int> IBAPI::modifyLmtOrder(std::map<int, MODIFY_ORD> updateOrd) {
 
 	printInfo("Update limit orders. ");
 	EW.combOpenOrd.clear();
@@ -296,9 +296,9 @@ std::vector<int> IBAPI::modifyLmtOrder(std::vector<MODIFY_ORD> updateOrd) {
 	std::vector<int> orderIdList;
 	int count = 0;
 
-	for (int i = 0; i < updateOrd.size(); i++) {
-		action = updateOrd[i].orderQty > 0 ? "BUY" : "SELL";
-		EC->placeOrder(updateOrd[i].orderId, ContractSamples::USStock(updateOrd[i].ticker), OrderSamples::LimitOrder(action, abs(updateOrd[i].orderQty), updateOrd[i].orderPrice));
+	for (std::map<int, MODIFY_ORD>::iterator it = updateOrd.begin(); it != updateOrd.end(); ++it) {
+		action = it->second.orderQty > 0 ? "BUY" : "SELL";
+		EC->placeOrder(it->first, ContractSamples::USStock(updateOrd[i].ticker), OrderSamples::LimitOrder(action, abs(updateOrd[i].orderQty), updateOrd[i].orderPrice));
 	}
 
 	while (!EW.b_openOrdReady) {
@@ -402,22 +402,27 @@ std::vector<int> IBAPI::openMktLmt(std::vector<STOCK_ORD> lmtOrder) {
 
 
 
-void IBAPI::updateOrder(std::vector<int> orderIdList, double aggBps) {
+void IBAPI::updateOrder(std::vector<int> orderIdList, double aggBps, int waitTime_s) {
 
 	printInfo("Update orders. ");
-	std::cout << "Input aggBps =" << aggBps << std::endl;
+	std::cout << "Input aggBps =" << aggBps << ".\n" << "Input orderIdList for update: " << std::endl;
+	for (int i = 0; i < orderIdList.size(); i++) {
+		std::cout << orderIdList[i] << " ";
+	}
+	std::cout << std::endl;
 
 	std::vector<int> myOrderIdList;
 	std::map<int, COMB_OPENORD> allOrd, myOrd;
 	std::map<int, COMB_OPENORD>::iterator it0;
 	std::vector<std::string> tickerList;	//tickerlist for request the latest bid/ask
-	std::vector<MODIFY_ORD> orderUpdate;		//stock order for update
+	std::map<int, MODIFY_ORD> orderUpdate,tmpOrderUpdate;		//stock order for update
 	std::map<std::string, QUOTE_DATA> quoteData;
 	double minTick;
 	double spreadBps;
 	double bid;
 	double ask;
 	double myBps;
+	int count = 0;
 
 	myOrderIdList = orderIdList;
 
@@ -431,15 +436,22 @@ void IBAPI::updateOrder(std::vector<int> orderIdList, double aggBps) {
 			myOrd.insert(*it0);
 			tickerList.push_back(it0->second.openOrd.ticker);
 			int remQty = it0->second.openOrd.action == "BUY" ? it0->second.ordStatus.remaining : -it0->second.ordStatus.remaining;	//if action="BUY", set quantity positive; otherwise negative
-			orderUpdate.push_back({ it0->first,it0->second.openOrd.ticker, -2, remQty, minTick });	//set the updateorder price to -2 for now
+			orderUpdate[it0->first]={ it0->second.openOrd.ticker, -2, remQty, minTick };	//set the updateorder price to -2 for now
 		}
 	}
 
+	if (myOrd.size() == 0) {
+		std::cout << "Remain open order size is zero. Stop update." << std::endl;
+		return;
+	}
+
 	do {
+		count++;
+
 		std::cout << "\n" << "Remain open order size: " << myOrd.size() << std::endl;
 
 		for (std::map<int, COMB_OPENORD>::iterator it = myOrd.begin(); it != myOrd.end(); ++it) {
-			std::cout << it->first << " => " << (it->second).openOrd.ticker << " action:" << (it->second).openOrd.action << " totalQty: " << (it->second).openOrd.totalQty
+			std::cout << "Remain open order: \n"<<it->first << " => " << (it->second).openOrd.ticker << " action:" << (it->second).openOrd.action << " totalQty: " << (it->second).openOrd.totalQty
 				<< ". Remaining: " << (it->second).ordStatus.remaining << ". ClientId: " << (it->second).ordStatus.clientId << "\n";
 		}
 
@@ -448,7 +460,7 @@ void IBAPI::updateOrder(std::vector<int> orderIdList, double aggBps) {
 		for (int i = 0; i < tickerList.size(); i++) {
 
 			spreadBps = (quoteData[tickerList[i]].askPrice[0] - quoteData[tickerList[i]].bidPrice[0]) / quoteData[tickerList[i]].bidPrice[0] * 10000;
-
+			std::cout << "ticker = " << tickerList[i] << ". minTick =" << orderUpdate[i].minTick << std::endl;
 			//if spreadBps is less than the input Bps, use spreadBps (update price to bid/ask for SELL/BUY)
 			myBps = spreadBps < aggBps ? spreadBps : aggBps;
 
@@ -457,17 +469,16 @@ void IBAPI::updateOrder(std::vector<int> orderIdList, double aggBps) {
 			ask = roundNum(quoteData[tickerList[i]].askPrice[0] * (1 - myBps / 10000), orderUpdate[i].minTick);
 			orderUpdate[i].orderPrice = orderUpdate[i].orderQty>0 ? bid :ask;
 
-			std::cout << "ticker: " << orderUpdate[i].ticker << ". Spread bps = " << spreadBps << ". mybps = " << myBps
+			std::cout << "ticker: " << orderUpdate[i].ticker << ". Spread bps = " << spreadBps << ". mybps = " << myBps << "Min tick = " << orderUpdate[i].minTick
 				<< ". update price: " << orderUpdate[i].orderPrice << " quantity: " << orderUpdate[i].orderQty << std::endl;
 		}
 
-		myOrderIdList = modifyLmtOrder(orderUpdate);
+		//myOrderIdList = modifyLmtOrder(orderUpdate);
 
-		Sleep(5000);	//wait 5s for order to fill
+		Sleep(waitTime_s*1000);	//wait time for order to fill
 
 		allOrd.clear();
 		myOrd.clear();
-		orderUpdate.clear();
 
 		allOrd = queryOrd();
 
@@ -478,8 +489,11 @@ void IBAPI::updateOrder(std::vector<int> orderIdList, double aggBps) {
 				myOrd.insert(*it0);
 				tickerList.push_back(it0->second.openOrd.ticker);
 				int remQty = it0->second.openOrd.action == "BUY" ? it0->second.ordStatus.remaining : -it0->second.ordStatus.remaining;	//if action="BUY", set quantity positive; otherwise negative
-				orderUpdate.push_back({ it0->first,it0->second.openOrd.ticker, -2, remQty });	//set the updateorder price to -1 for now
+				tmpOrderUpdate[it0->first] = { orderUpdate[it0->first].ticker, -2, remQty, orderUpdate[it0->first].minTick };
 			}
+			orderUpdate.clear();
+			orderUpdate = tmpOrderUpdate;
+			tmpOrderUpdate.clear();
 		}
 
 	} while (myOrd.size() > 0);
