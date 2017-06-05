@@ -44,6 +44,15 @@ int main(void)
 				<< ". Bid size: " << quoteMap[tickerList[i]].bidSize[0] << std::endl;
 		}
 		
+		int orderID = testAPI.queryNextOrderId();
+
+		//Order baseOrder = OrderSamples::LimitOrder("BUY", 100, 1010);
+		//Order baseOrder = OrderSamples::MarketOrder("BUY", 100);
+		//testAPI.FillArrivalPriceParams(baseOrder, 0.1, "Passive", "09:53:00 PST", "10:00:00 PST", true, false, 100000);
+		//testAPI.EC->placeOrder(orderID++, ContractSamples::USStock("AMZN"), baseOrder);
+
+		testAPI.closeAllAP(0.1, "Passive", "12:58:00 PST", "13:00:00 PST", true, false, 100000);
+
 		/*
 		std::vector<STOCK_ORD> testOrder = { {"TGI",1.8,100},{"PLCE",1.5,-200} };
 		
@@ -65,7 +74,7 @@ int main(void)
 		}
 		*/
 
-		testAPI.updateOrder({ 165,166 },2,5);
+		//testAPI.updateOrder({ 165,166 },2,5);
 		//std::cout << testAPI.queryMinTick("TGI") << std::endl;
 
 		//testAPI.EC->reqContractDetails(9002, ContractSamples::USStock("PLCE"));

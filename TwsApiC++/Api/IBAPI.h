@@ -27,6 +27,8 @@ public:
 	void printInfo(std::string info);
 	std::vector<STOCK_ORD> getCSV(std::string str);
 	double roundNum(double num, double minTick);	//round price to neareast min tick
+	void FillArrivalPriceParams(Order& baseOrder, double maxPctVol, std::string riskAversion, std::string startTime, std::string endTime,
+		bool forceCompletion, bool allowPastTime, double monetaryValue);
 
 
 	/**********************************************************************************************************/
@@ -38,6 +40,8 @@ public:
 	std::map<int, COMB_OPENORD> queryOrd();
 	int queryCash();
 	std::vector<int> sendLmtOrder(std::vector<STOCK_ORD> lmtOrder);
+	std::vector<int> sendAPOrder(std::vector<STOCK_ORD> APOrder, double maxPctVol, std::string riskAversion, std::string startTime, std::string endTime,
+		bool forceCompletion, bool allowPastTime, double monetaryValue);
 	std::vector<int> modifyLmtOrder(std::map<int, MODIFY_ORD> updateOrder);
 	double queryMinTick(std::string ticker);
 
@@ -47,6 +51,8 @@ public:
 	std::vector<int> closeAllPos();
 	std::vector<int> openMktLmt(std::vector<STOCK_ORD> lmtOrder);	//Send limit orders around open time according to bid(ask) price for BUY(SELL)
 	void updateOrder(std::vector<int> orderIdList, double aggBps, int waitTime_s);
+	std::vector<int> closeAllAP(double maxPctVol, std::string riskAversion, std::string startTime, std::string endTime,
+		bool forceCompletion, bool allowPastTime, double monetaryValue);	//close all positions using arrival price algo
 };
 
 
