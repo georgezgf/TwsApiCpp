@@ -1,3 +1,5 @@
+#define NOMINMAX
+
 #include "IBAPI.h"
 #include <time.h>
 
@@ -5,6 +7,9 @@
 #include <process.h>
 #include <iomanip>
 #include <algorithm>
+#include <regex>
+
+
 
 IBAPI::IBAPI() :
 	EW(), EC(EClientL0::New(&EW)) {}
@@ -24,14 +29,18 @@ void IBAPI::printInfo(std::string info) {
 	std::cout << std::left << std::setfill('*')<<std::setw(40)<< info <<std::endl;
 }
 
-std::vector<STOCK_ORD> IBAPI::getCSV(std::string str) {
+std::vector<CSV_READ> IBAPI::getCSV(std::string str) {
 
-	//Assume the csv file format: tick, score, price, share
+	//Assume the csv file format: tick, score, price, dmv
+
+	printInfo("CSV Read.  ");
+
+	std::cout << "File name: " << str << std::endl;
 
 	std::ifstream file(str);
 	std::vector<std::string> row;
-	std::vector <STOCK_ORD> orderCSV;
-	STOCK_ORD tmpOrd;
+	std::vector <CSV_READ> CSVRead;
+	CSV_READ tmpCSVRead;
 	int count = 0;
 	/*
 	if (!file.is_open()) {
@@ -44,18 +53,27 @@ std::vector<STOCK_ORD> IBAPI::getCSV(std::string str) {
 	{
 		// Get rid of the first row (usually header). Save data from the second row.
 		if (count != 0) {
-			std::string ticker = (*loop)[0];
+			std::string tmpticker = (*loop)[0];
+			//std::cout << tmpticker.size() << std::endl;
+			//In the current CSV file, ticker is alwasy AAPL.O. Get rid of the last two chars.
+			//tmpticker.erase(tmpticker.end() - 2, tmpticker.end());
+			//std::cout << tmpticker << std::endl;
+			std::regex r1("\"|\\..");	//get rid of ".X" and "" for ticker in the original CSV file
+			//std::cout << std::regex_replace(tmpticker, r1, "") << std::endl;
+			std::string ticker = std::regex_replace(tmpticker, r1, "");
+
+			double score = std::stod((*loop)[1]);
 			double price = std::stod((*loop)[2]);
-			int share = std::stoi((*loop)[1]) > 0 ? std::stoi((*loop)[3]) : -std::stoi((*loop)[3]);
+			int dmv = std::stoi((*loop)[3]);
 
-			tmpOrd = { ticker, price, share };
+			tmpCSVRead = { ticker, score, price, dmv };
 
-			orderCSV.push_back(tmpOrd);
+			CSVRead.push_back(tmpCSVRead);
 		}
 		count++;
 	}
 
-	return orderCSV;
+	return CSVRead;
 }
 
 double IBAPI::roundNum(double num, double minTick) {
@@ -102,6 +120,36 @@ void IBAPI::FillArrivalPriceParams(Order& baseOrder, double maxPctVol, std::stri
 	baseOrder.algoParams->push_back(tag5);
 	baseOrder.algoParams->push_back(tag6);
 	baseOrder.algoParams->push_back(tag7);
+}
+
+std::vector<STOCK_ORD> IBAPI::genOrder(std::vector<CSV_READ> csvRead, double multiplier) {
+	printInfo("Generate orders from CSV reading. ");
+
+	std::vector<STOCK_ORD> stockOrder;
+	int share=0;
+
+	for (int i = 0; i < csvRead.size(); i++) {
+		if (abs(csvRead[i].score) >= 10 && abs(csvRead[i].score) < 15) {
+			double tmp = multiplier*(std::min(10000 / csvRead[i].price, 0.01*csvRead[i].dmv));
+			int tmpshare = int(tmp / 100) * 100;	//down round share to 100
+			share = csvRead[i].score > 0 ? tmpshare : -tmpshare;
+		}
+		else if(abs(csvRead[i].score) >= 15 && abs(csvRead[i].score) < 20){
+			double tmp = multiplier*(std::min(20000 / csvRead[i].price, 0.01*csvRead[i].dmv));
+			int tmpshare = int(tmp / 100) * 100;	//down round share to 100
+			share = csvRead[i].score > 0 ? tmpshare : -tmpshare;
+		}
+		else if(abs(csvRead[i].score) >= 20) {
+			double tmp = multiplier*(std::min(30000 / csvRead[i].price, 0.01*csvRead[i].dmv));
+			int tmpshare = int(tmp / 100) * 100;	//down round share to 100
+			share = csvRead[i].score > 0 ? tmpshare : -tmpshare;
+		}
+		if (share > 0) {
+			stockOrder.push_back({ csvRead[i].ticker, csvRead[i].price, share });
+		}
+		
+	}
+	return stockOrder;
 }
 
 /**********************************************************************************************************/
@@ -566,8 +614,9 @@ void IBAPI::updateOrder(std::vector<int> orderIdList, double aggBps, int waitTim
 
 }
 
-std::vector<int> IBAPI::closeAllAP(double maxPctVol, std::string riskAversion, std::string startTime, std::string endTime,
+void IBAPI::closeAllAP(double maxPctVol, std::string riskAversion, std::string startTime, std::string endTime,
 	bool forceCompletion, bool allowPastTime, double monetaryValue) {
+
 	printInfo("Close all positions using Arrival Price algo. ");
 
 	std::vector<STOCK_ORD> closeOrd;
@@ -580,7 +629,7 @@ std::vector<int> IBAPI::closeAllAP(double maxPctVol, std::string riskAversion, s
 
 	if (Position.size() == 0) {
 		std::cout << "No position hold. Cannot close." << std::endl;
-		return { 0 };
+		return;
 	}
 
 	for (int i = 0; i < Position.size(); i++) {
@@ -592,17 +641,14 @@ std::vector<int> IBAPI::closeAllAP(double maxPctVol, std::string riskAversion, s
 
 	if (zeroPos == true) {
 		std::cout << "No position hold. Cannot close. zeroPos = " << zeroPos << std::endl;
-		return { 0 };
+		return;
 	}
-
-	//std::map<std::string, QUOTE_DATA> posMap = queryQuote(closeTickerList);
 
 	for (int i = 0; i < Position.size(); i++) {
 
 		if (Position[i].posQty != 0) {
 			// posQty>0: buy position. Need to sell at ask price to close; 
 			// posQty<0: sell position. Need to buy at bid price to close.
-			//closePrice = Position[i].posQty > 0 ? posMap[Position[i].ticker].askPrice[0] : posMap[Position[i].ticker].bidPrice[0];
 
 			tmpOrd = { Position[i].ticker, -1, -Position[i].posQty };	//set price to -1 because use market order
 			std::cout << "Close ticker:" << tmpOrd.ticker << ". Close position: " << tmpOrd.orderQty << std::endl;
@@ -612,5 +658,19 @@ std::vector<int> IBAPI::closeAllAP(double maxPctVol, std::string riskAversion, s
 
 	printInfo("Send Arrival Price close orders. ");
 
-	return sendAPOrder(closeOrd, maxPctVol, riskAversion, startTime, endTime, forceCompletion, allowPastTime, monetaryValue);
+	sendAPOrder(closeOrd, maxPctVol, riskAversion, startTime, endTime, forceCompletion, allowPastTime, monetaryValue);
+}
+
+std::vector<int> IBAPI::openMktAP(std::vector<STOCK_ORD> stockOrd, double maxPctVol, std::string riskAversion, std::string startTime, std::string endTime,
+	bool forceCompletion, bool allowPastTime, double monetaryValue) {
+
+	printInfo("Submit orders using Arrival Price algo. ");
+
+	for (int i = 0; i < stockOrd.size(); i++) {
+		std::cout << "Ticker: " << stockOrd[i].ticker << ". Order quantity: " << stockOrd[i].orderQty << std::endl;
+	}
+
+	printInfo("Send Arrival Price orders. ");
+
+	return sendAPOrder(stockOrd, maxPctVol, riskAversion, startTime, endTime, forceCompletion, allowPastTime, monetaryValue);
 }

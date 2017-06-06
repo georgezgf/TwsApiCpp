@@ -59,3 +59,10 @@ struct N_QUOTE_STATUS {
 	int n_bidsize;
 	int n_asksize;
 };
+
+struct CSV_READ {
+	std::string ticker;
+	double score;
+	double price;
+	int dmv;
+};

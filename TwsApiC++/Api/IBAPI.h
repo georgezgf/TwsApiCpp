@@ -25,10 +25,11 @@ public:
 	/**********************************************************************************************************/
 	/*general functions*/
 	void printInfo(std::string info);
-	std::vector<STOCK_ORD> getCSV(std::string str);
+	std::vector<CSV_READ> getCSV(std::string str);
 	double roundNum(double num, double minTick);	//round price to neareast min tick
 	void FillArrivalPriceParams(Order& baseOrder, double maxPctVol, std::string riskAversion, std::string startTime, std::string endTime,
 		bool forceCompletion, bool allowPastTime, double monetaryValue);
+	std::vector<STOCK_ORD> genOrder(std::vector<CSV_READ> csvRead,double multiplier);	//generate order for trade from csv reading data, multiplier is for different accounts
 
 
 	/**********************************************************************************************************/
@@ -51,8 +52,10 @@ public:
 	std::vector<int> closeAllPos();
 	std::vector<int> openMktLmt(std::vector<STOCK_ORD> lmtOrder);	//Send limit orders around open time according to bid(ask) price for BUY(SELL)
 	void updateOrder(std::vector<int> orderIdList, double aggBps, int waitTime_s);
-	std::vector<int> closeAllAP(double maxPctVol, std::string riskAversion, std::string startTime, std::string endTime,
+	void closeAllAP(double maxPctVol, std::string riskAversion, std::string startTime, std::string endTime,
 		bool forceCompletion, bool allowPastTime, double monetaryValue);	//close all positions using arrival price algo
+	std::vector<int> openMktAP(std::vector<STOCK_ORD> stockOrd, double maxPctVol, std::string riskAversion, std::string startTime, std::string endTime,
+		bool forceCompletion, bool allowPastTime, double monetaryValue); //submit arrival price orders at open market time
 };
 
 
