@@ -54,10 +54,8 @@ std::vector<CSV_READ> IBAPI::getCSV(std::string str) {
 		// Get rid of the first row (usually header). Save data from the second row.
 		if (count != 0) {
 			std::string tmpticker = (*loop)[0];
-			//std::cout << tmpticker.size() << std::endl;
+			
 			//In the current CSV file, ticker is alwasy AAPL.O. Get rid of the last two chars.
-			//tmpticker.erase(tmpticker.end() - 2, tmpticker.end());
-			//std::cout << tmpticker << std::endl;
 			std::regex r1("\"|\\..");	//get rid of ".X" and "" for ticker in the original CSV file
 			//std::cout << std::regex_replace(tmpticker, r1, "") << std::endl;
 			std::string ticker = std::regex_replace(tmpticker, r1, "");
@@ -128,27 +126,36 @@ std::vector<STOCK_ORD> IBAPI::genOrder(std::vector<CSV_READ> csvRead, double mul
 	std::vector<STOCK_ORD> stockOrder;
 	int share=0;
 
+	std::cout << "Input CSVlist size = " << csvRead.size() << std::endl;
+
 	for (int i = 0; i < csvRead.size(); i++) {
+		share = 0;
+
 		if (abs(csvRead[i].score) >= 10 && abs(csvRead[i].score) < 15) {
 			double tmp = multiplier*(std::min(10000 / csvRead[i].price, 0.01*csvRead[i].dmv));
-			int tmpshare = int(tmp / 100) * 100;	//down round share to 100
+			int tmpshare = int((tmp + 50) / 100) * 100;	//down round share to 100
 			share = csvRead[i].score > 0 ? tmpshare : -tmpshare;
+			//std::cout << tmp << ". tmpshare = " << tmpshare << ". share = " << share <<std::endl;
 		}
 		else if(abs(csvRead[i].score) >= 15 && abs(csvRead[i].score) < 20){
 			double tmp = multiplier*(std::min(20000 / csvRead[i].price, 0.01*csvRead[i].dmv));
-			int tmpshare = int(tmp / 100) * 100;	//down round share to 100
+			int tmpshare = int((tmp+50) / 100) * 100;	//down round share to 100
 			share = csvRead[i].score > 0 ? tmpshare : -tmpshare;
+			//std::cout << tmp << ". tmpshare = " << tmpshare << ". share = " << share << std::endl;
 		}
 		else if(abs(csvRead[i].score) >= 20) {
 			double tmp = multiplier*(std::min(30000 / csvRead[i].price, 0.01*csvRead[i].dmv));
-			int tmpshare = int(tmp / 100) * 100;	//down round share to 100
+			int tmpshare = int((tmp + 50) / 100) * 100;	//down round share to 100
 			share = csvRead[i].score > 0 ? tmpshare : -tmpshare;
+			//std::cout << tmp << ". tmpshare = " << tmpshare << ". share = " << share << std::endl;
 		}
-		if (share > 0) {
+		if (share != 0) {
 			stockOrder.push_back({ csvRead[i].ticker, csvRead[i].price, share });
 		}
 		
 	}
+	std::cout << "Generate orderlist size = " << stockOrder.size() << std::endl;
+
 	return stockOrder;
 }
 

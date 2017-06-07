@@ -5,7 +5,7 @@ using namespace TwsApi;
 
 #include <windows.h>		// Sleep(), in miliseconds
 #include <process.h>
-
+#include <time.h> 
 
 #define TEST( T, X ) ( printf( "T%7d %s\n", T, #X ), X )
 #define CurrentThreadId GetCurrentThreadId
@@ -15,7 +15,7 @@ int main(int argc, char *argv[])
 {
 	std::vector<std::string> lines;
 
-	std::cout << "argument numbers: " << argc << std::endl;
+	//std::cout << "argument numbers: " << argc << std::endl;
 	if (argc !=2) {
 		std::cerr << "Usage: " << argv[0] << " Config file path" << std::endl;
 		return 1;
@@ -47,6 +47,15 @@ int main(int argc, char *argv[])
 	std::cout << "Port = " << port << ". Multiplier = " << multiplier << "\n";
 	std::cout << "Open time: " << openStartTime << "=>" << openEndTime << "\n";
 	std::cout << "Close time: " << closeStartTime << "=>" << closeEndTime << "\n";
+
+	time_t rawtime;
+	struct tm * timeinfo;
+
+	time(&rawtime);
+	timeinfo = localtime(&rawtime);
+	std::string currentTime = asctime(timeinfo);
+
+	std::cout << "Current time: " << currentTime << "string size =" << currentTime.size() << std::endl;
 
 	printf("APIVersion    = %s\n", EClientL0::apiVersion());
 
@@ -99,7 +108,7 @@ int main(int argc, char *argv[])
 		
 		*/
 
-		
+		/*
 		stockPos = testAPI.queryPos();
 
 		std::cout << "Position size =" << stockPos.size() << std::endl;
@@ -107,7 +116,7 @@ int main(int argc, char *argv[])
 		for (int i = 0; i < stockPos.size(); i++) {
 			std::cout << "Ticker: " << stockPos[i].ticker << ". Position: " << stockPos[i].posQty << ". Avg cost: " << stockPos[i].avgCost << std::endl;
 		}
-		
+		*/
 
 		//testAPI.updateOrder({ 165,166 },2,5);
 		//std::cout << testAPI.queryMinTick("TGI") << std::endl;
@@ -123,16 +132,47 @@ int main(int argc, char *argv[])
 		//std::cout << testAPI.roundNum(147.65222, 0.01) << std::endl;
 		//std::cout << 148 % 5 << "  " << 148/5<<std::endl;
 
-		
-		combOrd = testAPI.queryOrd();
+	
 
-		std::cout << "Open order size =" << combOrd.size() << std::endl;
+		std::vector<CSV_READ> CSVRead = testAPI.getCSV("D:\\Dropbox\\Public\\Finance\\UEI1001\\erst.UEI001.2017-06-08.csv");
 
-		for (std::map<int, COMB_OPENORD>::iterator it = combOrd.begin(); it != combOrd.end(); ++it) {
-			std::cout << it->first << " => " << (it->second).openOrd.ticker <<" action:"<<  (it->second).openOrd.action << " totalQty: "<< (it->second).openOrd.totalQty
-				<<". Remaining: " << (it->second).ordStatus.remaining << ". ClientId: " << (it->second).ordStatus.clientId <<"\n";
-			
+		for (int i = 0; i < CSVRead.size(); i++) {
+			std::cout << "Ticker: " << CSVRead[i].ticker << ". Score = " << CSVRead[i].score << ". Price: " << CSVRead[i].price << ". DMV: " << CSVRead[i].dmv << std::endl;
 		}
+
+		std::vector<STOCK_ORD> gOrder = testAPI.genOrder(CSVRead, multiplier);
+		for (int i = 0; i < gOrder.size(); i++) {
+			std::cout << "Ticker: " << gOrder[i].ticker << ". Price: " << gOrder[i].orderPrice << ". share: " << gOrder[i].orderQty << std::endl;
+		}
+
+		std::cout << "Continue program? (y/n)";
+		char input;
+		std::cin >> input;
+		if (input == 'n' || input == 'N')
+			return 1;
+		else std::cin.ignore();
+
+		
+		std::vector<int> openOrderList = testAPI.openMktAP(gOrder, 0.05, "Passive", openStartTime, openEndTime, true, false, 100000);
+
+		for (int i = 0; i < 30; i++) {
+			Sleep(1000 * 60);	//sleep for 30mins
+			
+			combOrd = testAPI.queryOrd();
+
+			std::cout << "Open order size =" << combOrd.size() << std::endl;
+
+			for (std::map<int, COMB_OPENORD>::iterator it = combOrd.begin(); it != combOrd.end(); ++it) {
+				std::cout << it->first << " => " << (it->second).openOrd.ticker << " action:" << (it->second).openOrd.action << " totalQty: " << (it->second).openOrd.totalQty
+					<< ". Remaining: " << (it->second).ordStatus.remaining << ". ClientId: " << (it->second).ordStatus.clientId << "\n";
+
+			}
+		}
+
+		std::cout << "Enter to continue program";
+		std::cin.ignore();
+
+		testAPI.closeAllAP( 0.05, "Passive", closeStartTime, closeEndTime, true, false, 100000);
 		
 
 		/*
@@ -148,17 +188,6 @@ int main(int argc, char *argv[])
 		std::cout << "Cash = " << cash << std::endl;
 	*/
 		
-		std::vector<CSV_READ> CSVRead = testAPI.getCSV("D:\\Dropbox\\Public\\Finance\\UEI1001\\erst.UEI001.2017-06-06.csv");
-
-		for (int i = 0; i < CSVRead.size(); i++) {
-			std::cout << "Ticker: " <<  CSVRead[i].ticker <<". Score = " << CSVRead[i].score<< ". Price: "<< CSVRead[i].price << ". DMV: "<< CSVRead[i].dmv<<std::endl;
-		}
-		
-		std::vector<STOCK_ORD> tstockOrd = testAPI.genOrder(CSVRead,2);
-
-		for (int i = 0; i < tstockOrd.size(); i++) {
-			std::cout << "Ticker: " << tstockOrd[i].ticker << ". Price: " << tstockOrd[i].orderPrice << ". share: " << tstockOrd[i].orderQty << std::endl;
-		}
 
 		//std::vector<int> tmpList = testAPI.openMktAP(tstockOrd, 0.05, "Passive", "06:30:00 PST", "06:45:00 PST", true, false, 100000);
 
