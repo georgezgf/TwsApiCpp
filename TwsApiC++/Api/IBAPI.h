@@ -40,6 +40,7 @@ public:
 	std::vector<STOCK_POS> queryPos();
 	std::map<int, COMB_OPENORD> queryOrd();
 	int queryCash();
+	std::string queryPriExch(std::string ticker);
 	std::vector<int> sendLmtOrder(std::vector<STOCK_ORD> lmtOrder);
 	std::vector<int> sendAPOrder(std::vector<STOCK_ORD> APOrder, double maxPctVol, std::string riskAversion, std::string startTime, std::string endTime,
 		bool forceCompletion, bool allowPastTime, double monetaryValue);

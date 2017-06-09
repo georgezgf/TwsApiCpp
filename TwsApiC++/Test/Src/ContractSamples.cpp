@@ -79,7 +79,7 @@ Contract ContractSamples::OptionAtIse(){
 	return contract;
 }
 
-Contract ContractSamples::USStock(std::string ticker){
+Contract ContractSamples::USStock(std::string ticker, std::string PrimaryExch){
 	//! [stkcontract]
 	Contract contract;
 	contract.symbol = ticker;
@@ -88,8 +88,27 @@ Contract ContractSamples::USStock(std::string ticker){
 	//In the API side, NASDAQ is always defined as ISLAND
 	contract.exchange = "SMART";
 	//! [stkcontract]
+	if (PrimaryExch.size() != 0) {
+		contract.primaryExchange = PrimaryExch;
+	}
+	
 	return contract;
 }
+
+Contract ContractSamples::USStock(std::string ticker) {
+	//! [stkcontract]
+	Contract contract;
+	contract.symbol = ticker;
+	contract.secType = "STK";
+	contract.currency = "USD";
+	//In the API side, NASDAQ is always defined as ISLAND
+	contract.exchange = "SMART";
+	//! [stkcontract]
+
+	return contract;
+}
+
+
 
 Contract ContractSamples::USStockAtSmart(){
 	Contract contract;

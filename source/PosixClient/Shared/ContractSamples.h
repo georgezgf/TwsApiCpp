@@ -11,6 +11,7 @@ public:
 	static Contract CFD();
 	static Contract EuropeanStock();
 	static Contract OptionAtIse();
+	static Contract USStock(std::string ticker, std::string PrimaryExch);
 	static Contract USStock(std::string ticker);
 	static Contract USStockAtSmart();
 	static Contract USStockWithPrimaryExch();

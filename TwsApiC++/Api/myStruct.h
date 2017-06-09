@@ -37,6 +37,7 @@ struct STOCK_ORD {
 	std::string ticker;
 	double orderPrice;
 	int orderQty;
+	std::string primaryExch;
 };
 
 struct MODIFY_ORD {
@@ -51,6 +52,7 @@ struct STOCK_POS {
 	std::string ticker;
 	double avgCost;
 	int posQty;
+	//std::string exchange;
 };
 
 struct N_QUOTE_STATUS {

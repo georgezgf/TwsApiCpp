@@ -27,6 +27,7 @@ public:
 	double minTick;
 	std::map<int, COMB_OPENORD> combOpenOrd;
 	int cashBalance;
+	std::string primaryExchange;
 
 	MyEWrapper();
 

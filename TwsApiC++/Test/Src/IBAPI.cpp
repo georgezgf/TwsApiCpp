@@ -53,13 +53,7 @@ std::vector<CSV_READ> IBAPI::getCSV(std::string str) {
 	{
 		// Get rid of the first row (usually header). Save data from the second row.
 		if (count != 0) {
-			std::string tmpticker = (*loop)[0];
-			
-			//In the current CSV file, ticker is alwasy AAPL.O. Get rid of the last two chars.
-			std::regex r1("\"|\\..");	//get rid of ".X" and "" for ticker in the original CSV file
-			//std::cout << std::regex_replace(tmpticker, r1, "") << std::endl;
-			std::string ticker = std::regex_replace(tmpticker, r1, "");
-
+			std::string ticker = (*loop)[0];
 			double score = std::stod((*loop)[1]);
 			double price = std::stod((*loop)[2]);
 			int dmv = std::stoi((*loop)[3]);
@@ -124,33 +118,61 @@ std::vector<STOCK_ORD> IBAPI::genOrder(std::vector<CSV_READ> csvRead, double mul
 	printInfo("Generate orders from CSV reading. ");
 
 	std::vector<STOCK_ORD> stockOrder;
-	int share=0;
 
 	std::cout << "Input CSVlist size = " << csvRead.size() << std::endl;
 
 	for (int i = 0; i < csvRead.size(); i++) {
-		share = 0;
+		int share = 0;
+		std::smatch m;
+		std::regex r("\\.(\\w)");
+		std::string primaryExch;
+
+		//extract the primary exchange
+		if (std::regex_search(csvRead[i].ticker, m, r)) {
+			//std::cout << "Ticker primary exchange = " << csvRead[i].ticker << ". size = " << m.str(1) << std::endl;
+			char exch = m.str(1)[0];
+			//std::cout << "exch: " << exch << std::endl;
+			
+			switch (exch)
+			{
+			case 'O':
+				primaryExch = "ISLAND";
+				break;
+			case 'N':
+				primaryExch = "NYSE";
+				break;
+			case 'A':
+				primaryExch = "AMEX";
+				break;
+			default:
+				primaryExch = "";
+			}
+		}
+
+		std::regex r1("\"|\\..");	//get rid of ".X" and "" for ticker in the original CSV file
+									//std::cout << std::regex_replace(tmpticker, r1, "") << std::endl;
+		std::string ticker = std::regex_replace(csvRead[i].ticker, r1, "");
 
 		if (abs(csvRead[i].score) >= 10 && abs(csvRead[i].score) < 15) {
-			double tmp = multiplier*(std::min(10000 / csvRead[i].price, 0.01*csvRead[i].dmv));
-			int tmpshare = int((tmp + 50) / 100) * 100;	//down round share to 100
+			double tmp = std::min(10000 / csvRead[i].price, 0.01*csvRead[i].dmv);
+			int tmpshare = multiplier*int((tmp + 50) / 100) * 100;	//down round share to 100
 			share = csvRead[i].score > 0 ? tmpshare : -tmpshare;
 			//std::cout << tmp << ". tmpshare = " << tmpshare << ". share = " << share <<std::endl;
 		}
 		else if(abs(csvRead[i].score) >= 15 && abs(csvRead[i].score) < 20){
-			double tmp = multiplier*(std::min(20000 / csvRead[i].price, 0.01*csvRead[i].dmv));
-			int tmpshare = int((tmp+50) / 100) * 100;	//down round share to 100
+			double tmp = std::min(20000 / csvRead[i].price, 0.01*csvRead[i].dmv);
+			int tmpshare = multiplier*int((tmp+50) / 100) * 100;	//down round share to 100
 			share = csvRead[i].score > 0 ? tmpshare : -tmpshare;
 			//std::cout << tmp << ". tmpshare = " << tmpshare << ". share = " << share << std::endl;
 		}
 		else if(abs(csvRead[i].score) >= 20) {
-			double tmp = multiplier*(std::min(30000 / csvRead[i].price, 0.01*csvRead[i].dmv));
-			int tmpshare = int((tmp + 50) / 100) * 100;	//down round share to 100
+			double tmp = std::min(30000 / csvRead[i].price, 0.01*csvRead[i].dmv);
+			int tmpshare = multiplier*int((tmp + 50) / 100) * 100;	//down round share to 100
 			share = csvRead[i].score > 0 ? tmpshare : -tmpshare;
 			//std::cout << tmp << ". tmpshare = " << tmpshare << ". share = " << share << std::endl;
 		}
 		if (share != 0) {
-			stockOrder.push_back({ csvRead[i].ticker, csvRead[i].price, share });
+			stockOrder.push_back({ ticker, csvRead[i].price, share, primaryExch });
 		}
 		
 	}
@@ -211,6 +233,29 @@ double IBAPI::queryMinTick(std::string ticker) {
 		}
 	}
 	return EW.minTick;
+}
+
+std::string IBAPI::queryPriExch(std::string ticker) {
+
+	printInfo("Query primary exchange. ");
+
+	EW.primaryExchange = "";
+	EW.b_ctrDetail = false;
+
+	//int reqId = 8000;
+	int count = 0;
+
+	EC->reqContractDetails(1, ContractSamples::USStock(ticker));
+
+	while (!EW.b_ctrDetail) {
+		Sleep(100);
+		count++;
+		if (count > 50) {
+			std::cout << "Request exchange time out. Break." << std::endl;
+			break;
+		}
+	}
+	return EW.primaryExchange;
 }
 
 std::map<std::string, QUOTE_DATA> IBAPI::queryQuote(std::vector<std::string> tickerList) {
@@ -349,7 +394,7 @@ std::vector<int> IBAPI::sendLmtOrder(std::vector<STOCK_ORD> lmtOrder) {
 
 	for (int i = 0; i < lmtOrder.size(); i++) {
 		action = lmtOrder[i].orderQty > 0 ? "BUY" : "SELL";
-		EC->placeOrder(EW.m_orderId++, ContractSamples::USStock(lmtOrder[i].ticker), OrderSamples::LimitOrder(action, abs(lmtOrder[i].orderQty), lmtOrder[i].orderPrice));
+		EC->placeOrder(EW.m_orderId++, ContractSamples::USStock(lmtOrder[i].ticker,lmtOrder[i].primaryExch), OrderSamples::LimitOrder(action, abs(lmtOrder[i].orderQty), lmtOrder[i].orderPrice));
 	}
 
 	while (!EW.b_openOrdReady) {
@@ -386,7 +431,7 @@ std::vector<int> IBAPI::sendAPOrder(std::vector<STOCK_ORD> APOrder, double maxPc
 		action = APOrder[i].orderQty > 0 ? "BUY" : "SELL";
 		Order baseOrder = OrderSamples::MarketOrder(action, abs(APOrder[i].orderQty));
 		FillArrivalPriceParams(baseOrder, maxPctVol, riskAversion,startTime, endTime, forceCompletion, allowPastTime, monetaryValue);
-		EC->placeOrder(EW.m_orderId++, ContractSamples::USStock(APOrder[i].ticker), baseOrder);
+		EC->placeOrder(EW.m_orderId++, ContractSamples::USStock(APOrder[i].ticker, APOrder[i].primaryExch), baseOrder);
 	}
 
 	while (!EW.b_openOrdReady) {
@@ -481,9 +526,10 @@ std::vector<int> IBAPI::closeAllPos() {
 		if (Position[i].posQty != 0) {
 			// posQty>0: buy position. Need to sell at ask price to close; 
 			// posQty<0: sell position. Need to buy at bid price to close.
+			std::string primaryExchange = queryPriExch(Position[i].ticker);
 			closePrice = Position[i].posQty > 0 ? posMap[Position[i].ticker].askPrice[0] : posMap[Position[i].ticker].bidPrice[0];
 
-			tmpOrd = { Position[i].ticker, closePrice, -Position[i].posQty };
+			tmpOrd = { Position[i].ticker, closePrice, -Position[i].posQty,primaryExchange };
 			std::cout << "Close ticker:" << tmpOrd.ticker << ". Close price:" << tmpOrd.orderPrice << ". Close position: " << tmpOrd.orderQty << std::endl;
 			closeOrd.push_back(tmpOrd);
 		}
@@ -656,8 +702,8 @@ void IBAPI::closeAllAP(double maxPctVol, std::string riskAversion, std::string s
 		if (Position[i].posQty != 0) {
 			// posQty>0: buy position. Need to sell at ask price to close; 
 			// posQty<0: sell position. Need to buy at bid price to close.
-
-			tmpOrd = { Position[i].ticker, -1, -Position[i].posQty };	//set price to -1 because use market order
+			std::string primaryExchange = queryPriExch(Position[i].ticker);
+			tmpOrd = { Position[i].ticker, -1, -Position[i].posQty, primaryExchange };	//set price to -1 because use market order
 			std::cout << "Close ticker:" << tmpOrd.ticker << ". Close position: " << tmpOrd.orderQty << std::endl;
 			closeOrd.push_back(tmpOrd);
 		}

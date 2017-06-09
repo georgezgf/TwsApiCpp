@@ -207,6 +207,7 @@ void MyEWrapper::contractDetails(int reqId,const ContractDetails& contractDetail
 	//std::cout << "min Tick = " << contractDetails.minTick << std::endl;
 	
 	minTick = contractDetails.minTick;
+	primaryExchange = contractDetails.summary.primaryExchange.c_str();
 	//PrintProcessId, printf("CD: %10s %5s %8s, %5.2f\n", (const char*)C.localSymbol, (const char*)C.secType, (const char*)C.expiry, C.strike);
 }
 

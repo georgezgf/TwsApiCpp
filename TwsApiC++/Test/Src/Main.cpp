@@ -134,15 +134,15 @@ int main(int argc, char *argv[])
 
 	
 
-		std::vector<CSV_READ> CSVRead = testAPI.getCSV("D:\\Dropbox\\Public\\Finance\\UEI1001\\erst.UEI001.2017-06-08.csv");
+		std::vector<CSV_READ> CSVRead = testAPI.getCSV("D:\\Dropbox\\Public\\Finance\\UEI1001\\erst.UEI001.2017-06-09.csv");
 
 		for (int i = 0; i < CSVRead.size(); i++) {
-			std::cout << "Ticker: " << CSVRead[i].ticker << ". Score = " << CSVRead[i].score << ". Price: " << CSVRead[i].price << ". DMV: " << CSVRead[i].dmv << std::endl;
+			std::cout << "Ticker: " << CSVRead[i].ticker << " Score = " << CSVRead[i].score << ". Price: " << CSVRead[i].price << ". DMV: " << CSVRead[i].dmv << std::endl;
 		}
 
 		std::vector<STOCK_ORD> gOrder = testAPI.genOrder(CSVRead, multiplier);
 		for (int i = 0; i < gOrder.size(); i++) {
-			std::cout << "Ticker: " << gOrder[i].ticker << ". Price: " << gOrder[i].orderPrice << ". share: " << gOrder[i].orderQty << std::endl;
+			std::cout << "Ticker: " << gOrder[i].ticker << ". Primary exchange: " << gOrder[i].primaryExch << ". Price: " << gOrder[i].orderPrice << ". share: " << gOrder[i].orderQty << std::endl;
 		}
 
 		std::cout << "Continue program? (y/n)";
@@ -152,11 +152,12 @@ int main(int argc, char *argv[])
 			return 1;
 		else std::cin.ignore();
 
-		
+		//If everything is OK, submit open market arrival price orders
 		std::vector<int> openOrderList = testAPI.openMktAP(gOrder, 0.05, "Passive", openStartTime, openEndTime, true, false, 100000);
-
-		for (int i = 0; i < 30; i++) {
-			Sleep(1000 * 60);	//sleep for 30mins
+		
+		//Every 1 min, read open orders, total 15mins
+		for (int i = 0; i < 15; i++) {
+			Sleep(1000 * 60);	//sleep for 1 min
 			
 			combOrd = testAPI.queryOrd();
 
@@ -166,6 +167,19 @@ int main(int argc, char *argv[])
 				std::cout << it->first << " => " << (it->second).openOrd.ticker << " action:" << (it->second).openOrd.action << " totalQty: " << (it->second).openOrd.totalQty
 					<< ". Remaining: " << (it->second).ordStatus.remaining << ". ClientId: " << (it->second).ordStatus.clientId << "\n";
 
+			}
+		}
+
+		//Every 3 min, read positions, total 15mins
+		for (int i = 0; i < 5; i++) {
+			Sleep(1000 * 180);	//sleep for 3 min
+
+			stockPos = testAPI.queryPos();
+
+			std::cout << "Position size =" << stockPos.size() << std::endl;
+
+			for (int i = 0; i < stockPos.size(); i++) {
+				std::cout << "Ticker: " << stockPos[i].ticker << ". Position: " << stockPos[i].posQty << ". Avg cost: " << stockPos[i].avgCost << std::endl;
 			}
 		}
 
