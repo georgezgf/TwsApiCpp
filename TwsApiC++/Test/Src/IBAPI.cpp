@@ -153,19 +153,19 @@ std::vector<STOCK_ORD> IBAPI::genOrder(std::vector<CSV_READ> csvRead, double mul
 									//std::cout << std::regex_replace(tmpticker, r1, "") << std::endl;
 		std::string ticker = std::regex_replace(csvRead[i].ticker, r1, "");
 
-		if (abs(csvRead[i].score) >= 10 && abs(csvRead[i].score) < 15) {
+		if (abs(csvRead[i].score) >= 30 && abs(csvRead[i].score) < 45) {
 			double tmp = std::min(10000 / csvRead[i].price, 0.01*csvRead[i].dmv);
 			int tmpshare = multiplier*int((tmp + 50) / 100) * 100;	//down round share to 100
 			share = csvRead[i].score > 0 ? tmpshare : -tmpshare;
 			//std::cout << tmp << ". tmpshare = " << tmpshare << ". share = " << share <<std::endl;
 		}
-		else if(abs(csvRead[i].score) >= 15 && abs(csvRead[i].score) < 20){
+		else if(abs(csvRead[i].score) >= 45 && abs(csvRead[i].score) < 60){
 			double tmp = std::min(20000 / csvRead[i].price, 0.01*csvRead[i].dmv);
 			int tmpshare = multiplier*int((tmp+50) / 100) * 100;	//down round share to 100
 			share = csvRead[i].score > 0 ? tmpshare : -tmpshare;
 			//std::cout << tmp << ". tmpshare = " << tmpshare << ". share = " << share << std::endl;
 		}
-		else if(abs(csvRead[i].score) >= 20) {
+		else if(abs(csvRead[i].score) >= 60) {
 			double tmp = std::min(30000 / csvRead[i].price, 0.01*csvRead[i].dmv);
 			int tmpshare = multiplier*int((tmp + 50) / 100) * 100;	//down round share to 100
 			share = csvRead[i].score > 0 ? tmpshare : -tmpshare;

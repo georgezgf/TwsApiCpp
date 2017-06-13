@@ -134,7 +134,7 @@ int main(int argc, char *argv[])
 
 	
 
-		std::vector<CSV_READ> CSVRead = testAPI.getCSV("D:\\Dropbox\\Public\\Finance\\UEI1001\\erst.UEI001.2017-06-09.csv");
+		std::vector<CSV_READ> CSVRead = testAPI.getCSV("D:\\Dropbox\\Public\\Finance\\UEI1001\\erst.UEI001.2017-06-13.csv");
 
 		for (int i = 0; i < CSVRead.size(); i++) {
 			std::cout << "Ticker: " << CSVRead[i].ticker << " Score = " << CSVRead[i].score << ". Price: " << CSVRead[i].price << ". DMV: " << CSVRead[i].dmv << std::endl;
@@ -156,8 +156,7 @@ int main(int argc, char *argv[])
 		std::vector<int> openOrderList = testAPI.openMktAP(gOrder, 0.05, "Passive", openStartTime, openEndTime, true, false, 100000);
 		
 		//Every 1 min, read open orders, total 15mins
-		for (int i = 0; i < 15; i++) {
-			Sleep(1000 * 60);	//sleep for 1 min
+		for (int i = 0; i < 25; i++) {
 			
 			combOrd = testAPI.queryOrd();
 
@@ -168,8 +167,22 @@ int main(int argc, char *argv[])
 					<< ". Remaining: " << (it->second).ordStatus.remaining << ". ClientId: " << (it->second).ordStatus.clientId << "\n";
 
 			}
-		}
 
+			if (combOrd.size() == 0) {
+				stockPos = testAPI.queryPos();
+
+				std::cout << "Position size =" << stockPos.size() << std::endl;
+
+				for (int i = 0; i < stockPos.size(); i++) {
+					std::cout << "Ticker: " << stockPos[i].ticker << ". Position: " << stockPos[i].posQty << ". Avg cost: " << stockPos[i].avgCost << std::endl;
+				}
+
+				break;
+			}
+
+			Sleep(1000 * 60);	//sleep for 1 min
+		}
+		/*
 		//Every 3 min, read positions, total 15mins
 		for (int i = 0; i < 5; i++) {
 			Sleep(1000 * 180);	//sleep for 3 min
@@ -182,7 +195,7 @@ int main(int argc, char *argv[])
 				std::cout << "Ticker: " << stockPos[i].ticker << ". Position: " << stockPos[i].posQty << ". Avg cost: " << stockPos[i].avgCost << std::endl;
 			}
 		}
-
+		*/
 		std::cout << "Enter to continue program";
 		std::cin.ignore();
 
