@@ -55,7 +55,7 @@ int main(int argc, char *argv[])
 	timeinfo = localtime(&rawtime);
 	std::string currentTime = asctime(timeinfo);
 
-	std::cout << "Current time: " << currentTime << "string size =" << currentTime.size() << std::endl;
+	//std::cout << "Current time: " << currentTime << "string size =" << currentTime.size() << std::endl;
 
 	printf("APIVersion    = %s\n", EClientL0::apiVersion());
 
@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
 		testAPI.waitForNextValidId();
 
 		std::map<std::string, QUOTE_DATA> quoteMap;
-		std::vector<STOCK_POS> stockPos;
+		std::vector<POS> allPos;
 		std::map<int, COMB_OPENORD> combOrd;
 		/*
 		quoteMap = testAPI.queryQuote(tickerList);
@@ -134,7 +134,7 @@ int main(int argc, char *argv[])
 
 	
 
-		std::vector<CSV_READ> CSVRead = testAPI.getCSV("D:\\Dropbox\\Public\\Finance\\UEI1001\\erst.UEI001.2017-06-13.csv");
+		std::vector<CSV_READ> CSVRead = testAPI.getCSV("D:\\Dropbox\\Public\\Finance\\UEI1001\\erst.UEI001.2017-06-16.csv");
 
 		for (int i = 0; i < CSVRead.size(); i++) {
 			std::cout << "Ticker: " << CSVRead[i].ticker << " Score = " << CSVRead[i].score << ". Price: " << CSVRead[i].price << ". DMV: " << CSVRead[i].dmv << std::endl;
@@ -152,6 +152,12 @@ int main(int argc, char *argv[])
 			return 1;
 		else std::cin.ignore();
 
+		//testAPI.EC->reqFundamentalData(8001, ContractSamples::USStock("ADI"), "CalendarReport");
+		//Sleep(2000);
+		//testAPI.EC->cancelFundamentalData(8001);
+
+
+		
 		//If everything is OK, submit open market arrival price orders
 		std::vector<int> openOrderList = testAPI.openMktAP(gOrder, 0.05, "Passive", openStartTime, openEndTime, true, false, 100000);
 		
@@ -169,12 +175,13 @@ int main(int argc, char *argv[])
 			}
 
 			if (combOrd.size() == 0) {
-				stockPos = testAPI.queryPos();
+				allPos = testAPI.queryPos();
 
-				std::cout << "Position size =" << stockPos.size() << std::endl;
+				std::cout << "Position size =" << allPos.size() << std::endl;
 
-				for (int i = 0; i < stockPos.size(); i++) {
-					std::cout << "Ticker: " << stockPos[i].ticker << ". Position: " << stockPos[i].posQty << ". Avg cost: " << stockPos[i].avgCost << std::endl;
+				for (int i = 0; i < allPos.size(); i++) {
+					std::cout << "Ticker: " << allPos[i].ticker << ". Security type: " << allPos[i].secType << ". Position: " 
+						<< allPos[i].posQty << ". Avg cost: " << allPos[i].avgCost << std::endl;
 				}
 
 				break;
@@ -182,24 +189,12 @@ int main(int argc, char *argv[])
 
 			Sleep(1000 * 60);	//sleep for 1 min
 		}
-		/*
-		//Every 3 min, read positions, total 15mins
-		for (int i = 0; i < 5; i++) {
-			Sleep(1000 * 180);	//sleep for 3 min
+		
 
-			stockPos = testAPI.queryPos();
-
-			std::cout << "Position size =" << stockPos.size() << std::endl;
-
-			for (int i = 0; i < stockPos.size(); i++) {
-				std::cout << "Ticker: " << stockPos[i].ticker << ". Position: " << stockPos[i].posQty << ". Avg cost: " << stockPos[i].avgCost << std::endl;
-			}
-		}
-		*/
 		std::cout << "Enter to continue program";
 		std::cin.ignore();
 
-		testAPI.closeAllAP( 0.05, "Passive", closeStartTime, closeEndTime, true, false, 100000);
+		testAPI.closeAllStockAP( 0.05, "Passive", closeStartTime, closeEndTime, true, false, 100000);
 		
 
 		/*

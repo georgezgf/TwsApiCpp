@@ -148,9 +148,9 @@ void MyEWrapper::position(const IBString& account, const Contract& contract, int
 	printf("Position. %s - Symbol: %s, SecType: %s, Currency: %s, Position: %d, Avg Cost: %g\n", \
 		account.c_str(), contract.symbol.c_str(), contract.secType.c_str(), contract.currency.c_str(), position, avgCost);
 */
-	STOCK_POS tmpPos = { contract.symbol.c_str(), avgCost, position };
+	POS tmpPos = { contract.symbol.c_str(), avgCost, position, contract.secType.c_str() };
 
-	stockPos.push_back(tmpPos);
+	allPos.push_back(tmpPos);
 }
 
 void MyEWrapper::positionEnd()
@@ -283,4 +283,9 @@ void MyEWrapper::accountSummaryEnd(int reqId)
 {
 	//printf("AccountSummaryEnd. Req Id: %d\n", reqId);
 	b_accSummary = true;
+}
+
+void MyEWrapper::fundamentalData(TickerId reqId, const IBString& data) {
+	std::cout << "fundamental " << std::endl;
+	printf("FundamentalData. ReqId: %ld, %s\n", reqId, data.c_str());
 }

@@ -48,11 +48,11 @@ struct MODIFY_ORD {
 	double minTick;
 };
 
-struct STOCK_POS {
+struct POS {
 	std::string ticker;
 	double avgCost;
 	int posQty;
-	//std::string exchange;
+	std::string secType;
 };
 
 struct N_QUOTE_STATUS {

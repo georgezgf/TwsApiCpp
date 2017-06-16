@@ -37,7 +37,7 @@ public:
 	void waitForNextValidId();
 	int queryNextOrderId();
 	std::map<std::string, QUOTE_DATA> queryQuote(std::vector<std::string> tickerList);
-	std::vector<STOCK_POS> queryPos();
+	std::vector<POS> queryPos();
 	std::map<int, COMB_OPENORD> queryOrd();
 	int queryCash();
 	std::string queryPriExch(std::string ticker);
@@ -53,7 +53,7 @@ public:
 	std::vector<int> closeAllPos();
 	std::vector<int> openMktLmt(std::vector<STOCK_ORD> lmtOrder);	//Send limit orders around open time according to bid(ask) price for BUY(SELL)
 	void updateOrder(std::vector<int> orderIdList, double aggBps, int waitTime_s);
-	void closeAllAP(double maxPctVol, std::string riskAversion, std::string startTime, std::string endTime,
+	void closeAllStockAP(double maxPctVol, std::string riskAversion, std::string startTime, std::string endTime,
 		bool forceCompletion, bool allowPastTime, double monetaryValue);	//close all positions using arrival price algo
 	std::vector<int> openMktAP(std::vector<STOCK_ORD> stockOrd, double maxPctVol, std::string riskAversion, std::string startTime, std::string endTime,
 		bool forceCompletion, bool allowPastTime, double monetaryValue); //submit arrival price orders at open market time

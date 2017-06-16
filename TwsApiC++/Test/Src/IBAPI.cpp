@@ -155,23 +155,23 @@ std::vector<STOCK_ORD> IBAPI::genOrder(std::vector<CSV_READ> csvRead, double mul
 
 		if (abs(csvRead[i].score) >= 30 && abs(csvRead[i].score) < 45) {
 			double tmp = std::min(10000 / csvRead[i].price, 0.01*csvRead[i].dmv);
-			int tmpshare = multiplier*int((tmp + 50) / 100) * 100;	//down round share to 100
+			int tmpshare = int((multiplier*tmp + 50) / 100) * 100;	//down round share to 100
 			share = csvRead[i].score > 0 ? tmpshare : -tmpshare;
 			//std::cout << tmp << ". tmpshare = " << tmpshare << ". share = " << share <<std::endl;
 		}
 		else if(abs(csvRead[i].score) >= 45 && abs(csvRead[i].score) < 60){
 			double tmp = std::min(20000 / csvRead[i].price, 0.01*csvRead[i].dmv);
-			int tmpshare = multiplier*int((tmp+50) / 100) * 100;	//down round share to 100
+			int tmpshare = int((multiplier*tmp+50) / 100) * 100;	//down round share to 100
 			share = csvRead[i].score > 0 ? tmpshare : -tmpshare;
 			//std::cout << tmp << ". tmpshare = " << tmpshare << ". share = " << share << std::endl;
 		}
 		else if(abs(csvRead[i].score) >= 60) {
 			double tmp = std::min(30000 / csvRead[i].price, 0.01*csvRead[i].dmv);
-			int tmpshare = multiplier*int((tmp + 50) / 100) * 100;	//down round share to 100
+			int tmpshare = int((multiplier*tmp + 50) / 100) * 100;	//down round share to 100
 			share = csvRead[i].score > 0 ? tmpshare : -tmpshare;
 			//std::cout << tmp << ". tmpshare = " << tmpshare << ". share = " << share << std::endl;
 		}
-		if (share != 0) {
+		if (share != 0 && csvRead[i].price>=3) {
 			stockOrder.push_back({ ticker, csvRead[i].price, share, primaryExch });
 		}
 		
@@ -307,11 +307,11 @@ std::map<std::string, QUOTE_DATA> IBAPI::queryQuote(std::vector<std::string> tic
 	
 }
 
-std::vector<STOCK_POS> IBAPI::queryPos() {
+std::vector<POS> IBAPI::queryPos() {
 
 	printInfo("Query Position. ");
 
-	EW.stockPos.clear();
+	EW.allPos.clear();
 	EW.b_posReady = false;
 
 	EC->reqPositions();
@@ -329,7 +329,7 @@ std::vector<STOCK_POS> IBAPI::queryPos() {
 
 	EC->cancelPositions();
 
-	return EW.stockPos;
+	return EW.allPos;
 }
 
 std::map<int, COMB_OPENORD> IBAPI::queryOrd() {
@@ -500,7 +500,7 @@ std::vector<int> IBAPI::closeAllPos() {
 	double closePrice;
 	bool zeroPos = true;	// make sure there is position to close.
 
-	std::vector<STOCK_POS> Position = queryPos();
+	std::vector<POS> Position = queryPos();
 
 	if (Position.size() == 0) {
 		std::cout << "No position hold. Cannot close." << std::endl;
@@ -667,7 +667,7 @@ void IBAPI::updateOrder(std::vector<int> orderIdList, double aggBps, int waitTim
 
 }
 
-void IBAPI::closeAllAP(double maxPctVol, std::string riskAversion, std::string startTime, std::string endTime,
+void IBAPI::closeAllStockAP(double maxPctVol, std::string riskAversion, std::string startTime, std::string endTime,
 	bool forceCompletion, bool allowPastTime, double monetaryValue) {
 
 	printInfo("Close all positions using Arrival Price algo. ");
@@ -678,7 +678,7 @@ void IBAPI::closeAllAP(double maxPctVol, std::string riskAversion, std::string s
 	double closePrice;
 	bool zeroPos = true;	// make sure there is position to close.
 
-	std::vector<STOCK_POS> Position = queryPos();
+	std::vector<POS> Position = queryPos();
 
 	if (Position.size() == 0) {
 		std::cout << "No position hold. Cannot close." << std::endl;
@@ -698,12 +698,12 @@ void IBAPI::closeAllAP(double maxPctVol, std::string riskAversion, std::string s
 	}
 
 	for (int i = 0; i < Position.size(); i++) {
-
-		if (Position[i].posQty != 0) {
+		//only close stock positions for now
+		if (Position[i].posQty != 0 && Position[i].secType=="STK" ) {
 			// posQty>0: buy position. Need to sell at ask price to close; 
 			// posQty<0: sell position. Need to buy at bid price to close.
 			std::string primaryExchange = queryPriExch(Position[i].ticker);
-			tmpOrd = { Position[i].ticker, -1, -Position[i].posQty, primaryExchange };	//set price to -1 because use market order
+			tmpOrd = { Position[i].ticker, -1, -Position[i].posQty, primaryExchange};	//set price to -1 because use market order
 			std::cout << "Close ticker:" << tmpOrd.ticker << ". Close position: " << tmpOrd.orderQty << std::endl;
 			closeOrd.push_back(tmpOrd);
 		}

@@ -23,7 +23,7 @@ public:
 	std::vector<N_QUOTE_STATUS> n_quoteStatus;	//Record how many times each query quote data (askprice, bidprice, asksize, bidsize) are received.
 	std::vector<QUOTE_DATA> tickData;	//Record quote data for queryQuote function
 	std::vector<std::string> tickerList;
-	std::vector<STOCK_POS> stockPos;
+	std::vector<POS> allPos;
 	double minTick;
 	std::map<int, COMB_OPENORD> combOpenOrd;
 	int cashBalance;
@@ -62,5 +62,6 @@ public:
 	void checkMessagesStopped(void);
 	void accountSummary(int reqId, const IBString& account, const IBString& tag, const IBString& value, const IBString& currency);
 	void accountSummaryEnd(int reqId);
+	void fundamentalData(TickerId reqId, const IBString& data);
 
 };
