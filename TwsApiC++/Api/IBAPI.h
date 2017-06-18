@@ -55,6 +55,8 @@ public:
 	void updateOrder(std::vector<int> orderIdList, double aggBps, int waitTime_s);
 	void closeAllStockAP(double maxPctVol, std::string riskAversion, std::string startTime, std::string endTime,
 		bool forceCompletion, bool allowPastTime, double monetaryValue);	//close all positions using arrival price algo
+	void closePartAP(std::vector<STOCK_ORD> orderList, double maxPctVol, std::string riskAversion, std::string startTime, std::string endTime,
+		bool forceCompletion, bool allowPastTime, double monetaryValue);	//close certain positions using arrival price algo
 	std::vector<int> openMktAP(std::vector<STOCK_ORD> stockOrd, double maxPctVol, std::string riskAversion, std::string startTime, std::string endTime,
 		bool forceCompletion, bool allowPastTime, double monetaryValue); //submit arrival price orders at open market time
 };

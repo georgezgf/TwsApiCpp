@@ -674,8 +674,7 @@ void IBAPI::closeAllStockAP(double maxPctVol, std::string riskAversion, std::str
 
 	std::vector<STOCK_ORD> closeOrd;
 	STOCK_ORD tmpOrd;
-	std::vector<std::string> closeTickerList;
-	double closePrice;
+	//std::vector<std::string> closeTickerList;
 	bool zeroPos = true;	// make sure there is position to close.
 
 	std::vector<POS> Position = queryPos();
@@ -686,7 +685,7 @@ void IBAPI::closeAllStockAP(double maxPctVol, std::string riskAversion, std::str
 	}
 
 	for (int i = 0; i < Position.size(); i++) {
-		closeTickerList.push_back(Position[i].ticker);
+		//closeTickerList.push_back(Position[i].ticker);
 		if (Position[i].posQty != 0) {
 			zeroPos = false;
 		}
@@ -707,6 +706,49 @@ void IBAPI::closeAllStockAP(double maxPctVol, std::string riskAversion, std::str
 			std::cout << "Close ticker:" << tmpOrd.ticker << ". Close position: " << tmpOrd.orderQty << std::endl;
 			closeOrd.push_back(tmpOrd);
 		}
+	}
+
+	printInfo("Send Arrival Price close orders. ");
+
+	sendAPOrder(closeOrd, maxPctVol, riskAversion, startTime, endTime, forceCompletion, allowPastTime, monetaryValue);
+}
+
+void IBAPI::closePartAP(std::vector<STOCK_ORD> orderList, double maxPctVol, std::string riskAversion, std::string startTime, std::string endTime,
+	bool forceCompletion, bool allowPastTime, double monetaryValue) {
+	printInfo("Close part of the positions using Arrival Price algo. ");
+
+	std::vector<std::string> orderTicker;
+	std::vector<STOCK_ORD> closeOrd;
+	bool zeroPos = true;	// make sure there is position to close.
+
+	std::vector<POS> Position = queryPos();
+
+	if (Position.size() == 0) {
+		std::cout << "No position hold. Cannot close." << std::endl;
+		return;
+	}
+
+	for (int i = 0; i < orderList.size(); i++) {
+		orderTicker.push_back(orderList[i].ticker);
+	}
+	
+	//Exctract positions that are in the order ticker lists to generate close orders
+	for (int i = 0; i < Position.size(); i++) {
+		if (Position[i].posQty != 0 && std::find(orderTicker.begin(), orderTicker.end(), Position[i].ticker) != orderTicker.end()) {
+			std::string primaryExchange = queryPriExch(Position[i].ticker);
+			// posQty>0: buy position. Need to sell at ask price to close; 
+			// posQty<0: sell position. Need to buy at bid price to close.
+			STOCK_ORD tmpOrd = { Position[i].ticker, -1, -Position[i].posQty, primaryExchange };	//set price to -1 due to market order
+			std::cout << "Close ticker:" << tmpOrd.ticker << ". Close position: " << tmpOrd.orderQty << std::endl;
+			closeOrd.push_back(tmpOrd);
+			zeroPos = false;
+		}
+			
+	}
+	
+	if (zeroPos == true) {
+		std::cout << "No position to close. Cannot close. zeroPos = " << zeroPos << std::endl;
+		return;
 	}
 
 	printInfo("Send Arrival Price close orders. ");
