@@ -50,12 +50,17 @@ int main(int argc, char *argv[])
 
 	time_t rawtime;
 	struct tm * timeinfo;
+	char buffer[80];
 
 	time(&rawtime);
 	timeinfo = localtime(&rawtime);
-	std::string currentTime = asctime(timeinfo);
+	//std::string currentTime = asctime(timeinfo);
+	strftime(buffer, 80, "%F", timeinfo);
+	std::string buffers(buffer);
 
 	//std::cout << "Current time: " << currentTime << "string size =" << currentTime.size() << std::endl;
+	//std::cout << "time = " << buffer << ".  " << buffers <<std::endl;
+	//std::cout << "D:\\Dropbox\\Public\\Finance\\UEI1001\\erst.UEI001." + buffers << std::endl;
 
 	printf("APIVersion    = %s\n", EClientL0::apiVersion());
 
@@ -133,14 +138,25 @@ int main(int argc, char *argv[])
 		//std::cout << 148 % 5 << "  " << 148/5<<std::endl;
 
 	
+		std::string csvFile = "D:\\Dropbox\\Public\\Finance\\syncFile\\UEI001\\erst.UEI001." + buffers + ".csv";
 
-		std::vector<CSV_READ> CSVRead = testAPI.getCSV("D:\\Dropbox\\Public\\Finance\\UEI1001\\erst.UEI001.2017-06-19.csv");
+		std::vector<CSV_READ> CSVRead = testAPI.getCSV(csvFile);
+
+		if (CSVRead.size() == 0) {
+			std::cout << "Read csv failed. Stop program" << std::endl;
+			return 1;
+		}
 
 		for (int i = 0; i < CSVRead.size(); i++) {
 			std::cout << "Ticker: " << CSVRead[i].ticker << " Score = " << CSVRead[i].score << ". Price: " << CSVRead[i].price << ". DMV: " << CSVRead[i].dmv << std::endl;
 		}
 
 		std::vector<STOCK_ORD> gOrder = testAPI.genOrder(CSVRead, multiplier);
+
+		if (gOrder.size() == 0) {
+			std::cout << "There is no stock to trade today. Stop program" << std::endl;
+			return 1;
+		}
 		for (int i = 0; i < gOrder.size(); i++) {
 			std::cout << "Ticker: " << gOrder[i].ticker << ". Primary exchange: " << gOrder[i].primaryExch << ". Price: " << gOrder[i].orderPrice << ". share: " << gOrder[i].orderQty << std::endl;
 		}
