@@ -26,7 +26,8 @@ public:
 	std::vector<POS> allPos;
 	double minTick;
 	std::map<int, COMB_OPENORD> combOpenOrd;
-	int cashBalance;
+	double cashBalance;
+	double buyingPower;
 	std::string primaryExchange;
 
 	MyEWrapper();

@@ -269,19 +269,24 @@ void MyEWrapper::checkMessagesStopped(void)
 
 void MyEWrapper::accountSummary(int reqId, const IBString& account, const IBString& tag, const IBString& value, const IBString& currency) 
 {
-	//printf("Acct Summary. ReqId: %d, Account: %s, Tag: %s, Value: %s, Currency: %s\n", reqId, account.c_str(), tag.c_str(), value.c_str(), currency.c_str());
-	b_accSummary = false;
+	printf("Acct Summary. ReqId: %d, Account: %s, Tag: %s, Value: %s, Currency: %s\n", reqId, account.c_str(), tag.c_str(), value.c_str(), currency.c_str());
+	
 	std::string tmpTag = tag.c_str();
 
-	if (tmpTag == "CashBalance") {
-		cashBalance = std::stoi(value.c_str());
+	if (tmpTag == "TotalCashValue") {
+		cashBalance = std::stod(value.c_str());
 		//std::cout << "CashBalance = "  << cashBalance <<std::endl;
+	}
+
+	if (tmpTag == "BuyingPower") {
+		buyingPower = std::stod(value.c_str());
+		//std::cout << "rrr Buying power = "  << value.c_str() <<std::endl;
 	}
 }
 
 void MyEWrapper::accountSummaryEnd(int reqId) 
 {
-	//printf("AccountSummaryEnd. Req Id: %d\n", reqId);
+	printf("AccountSummaryEnd. Req Id: %d\n", reqId);
 	b_accSummary = true;
 }
 

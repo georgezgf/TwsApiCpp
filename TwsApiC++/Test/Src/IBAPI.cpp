@@ -363,7 +363,9 @@ int IBAPI::queryCash() {
 
 	printInfo("Request account cash balance. ");
 
-	EC->reqAccountSummary(9001, "All", "$LEDGER");
+	EW.b_accSummary = false;
+
+	EC->reqAccountSummary(9001, "All", "TotalCashValue");
 
 	int count = 0;
 
@@ -379,6 +381,30 @@ int IBAPI::queryCash() {
 	EC->cancelAccountSummary(9001);
 
 	return EW.cashBalance;
+}
+
+int IBAPI::queryBuyingPower() {
+
+	printInfo("Request account buying power. ");
+
+	EW.b_accSummary = false;
+
+	EC->reqAccountSummary(9002, "All", "BuyingPower");
+
+	int count = 0;
+
+	while (!EW.b_accSummary) {
+		Sleep(100);
+		count++;
+		if (count > 100) {
+			std::cout << "Request buying power time out. Break." << std::endl;
+			break;
+		}
+	}
+
+	EC->cancelAccountSummary(9002);
+
+	return EW.buyingPower;
 }
 
 std::vector<int> IBAPI::sendLmtOrder(std::vector<STOCK_ORD> lmtOrder) {

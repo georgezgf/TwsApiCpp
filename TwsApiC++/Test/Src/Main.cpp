@@ -11,6 +11,10 @@ using namespace TwsApi;
 #define CurrentThreadId GetCurrentThreadId
 #define PrintProcessId printf("%ld  ", CurrentThreadId() )
 
+#define READCSV		//uncomment this to read CSV files
+#define SUBMITORDER	//uncomment this to submit open and close orders
+//#define TESTFUN		//uncomment this to test functions
+
 int main(int argc, char *argv[])
 {
 	std::vector<std::string> lines;
@@ -137,6 +141,7 @@ int main(int argc, char *argv[])
 		//std::cout << testAPI.roundNum(147.65222, 0.01) << std::endl;
 		//std::cout << 148 % 5 << "  " << 148/5<<std::endl;
 
+#ifdef READCSV
 	
 		std::string csvFile = "D:\\Dropbox\\Public\\Finance\\syncFile\\UEI001\\erst.UEI001." + buffers + ".csv";
 
@@ -161,18 +166,20 @@ int main(int argc, char *argv[])
 			std::cout << "Ticker: " << gOrder[i].ticker << ". Primary exchange: " << gOrder[i].primaryExch << ". Price: " << gOrder[i].orderPrice << ". share: " << gOrder[i].orderQty << std::endl;
 		}
 
+#endif
+		/*
 		std::cout << "Continue program? (y/n)";
 		char input;
 		std::cin >> input;
 		if (input == 'n' || input == 'N')
 			return 1;
 		else std::cin.ignore();
-
+		*/
 		//testAPI.EC->reqFundamentalData(8001, ContractSamples::USStock("ADI"), "CalendarReport");
 		//Sleep(2000);
 		//testAPI.EC->cancelFundamentalData(8001);
 
-
+#ifdef SUBMITORDER
 		
 		//If everything is OK, submit open market arrival price orders
 		std::vector<int> openOrderList = testAPI.openMktAP(gOrder, 0.05, "Passive", openStartTime, openEndTime, true, false, 100000);
@@ -206,13 +213,23 @@ int main(int argc, char *argv[])
 			Sleep(1000 * 60);	//sleep for 1 min
 		}
 		
-
+		/*
 		std::cout << "Enter to continue program";
 		std::cin.ignore();
-
+		//*/
 		testAPI.closePartAP(gOrder, 0.05, "Passive", closeStartTime, closeEndTime, true, false, 100000);
 		//testAPI.closeAllStockAP( 0.05, "Passive", closeStartTime, closeEndTime, true, false, 100000);
 		
+#endif
+
+#ifdef TESTFUN
+		double cash = testAPI.queryCash();
+		std::cout << "Cash = " << cash << std::endl;
+		
+		double bp = testAPI.queryBuyingPower();
+		std::cout << "Buying power = " << bp << std::endl;
+#endif
+
 
 		/*
 		for (int i = 0; i <open_Ord.size(); i++) {
