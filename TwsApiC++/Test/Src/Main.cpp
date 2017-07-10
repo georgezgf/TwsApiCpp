@@ -156,7 +156,10 @@ int main(int argc, char *argv[])
 			std::cout << "Ticker: " << CSVRead[i].ticker << " Score = " << CSVRead[i].score << ". Price: " << CSVRead[i].price << ". DMV: " << CSVRead[i].dmv << std::endl;
 		}
 
-		std::vector<STOCK_ORD> gOrder = testAPI.genOrder(CSVRead, multiplier);
+		double bp = testAPI.queryBuyingPower();
+		std::cout << "Buying power = " << bp << std::endl;
+
+		std::vector<STOCK_ORD> gOrder = testAPI.genOrder(CSVRead, multiplier,bp);
 
 		if (gOrder.size() == 0) {
 			std::cout << "There is no stock to trade today. Stop program" << std::endl;

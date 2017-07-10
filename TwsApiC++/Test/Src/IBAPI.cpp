@@ -114,15 +114,18 @@ void IBAPI::FillArrivalPriceParams(Order& baseOrder, double maxPctVol, std::stri
 	baseOrder.algoParams->push_back(tag7);
 }
 
-std::vector<STOCK_ORD> IBAPI::genOrder(std::vector<CSV_READ> csvRead, double multiplier) {
+std::vector<STOCK_ORD> IBAPI::genOrder(std::vector<CSV_READ> csvRead, double multiplier, double buyingPower) {
 	printInfo("Generate orders from CSV reading. ");
 
 	std::vector<STOCK_ORD> stockOrder;
+
+	double tradeValue = 0;
 
 	std::cout << "Input CSVlist size = " << csvRead.size() << std::endl;
 
 	for (int i = 0; i < csvRead.size(); i++) {
 		int share = 0;
+		
 		std::smatch m;
 		std::regex r("\\.(\\w)");
 		std::string primaryExch;
@@ -154,30 +157,50 @@ std::vector<STOCK_ORD> IBAPI::genOrder(std::vector<CSV_READ> csvRead, double mul
 		std::string ticker = std::regex_replace(csvRead[i].ticker, r1, "");
 
 		if (abs(csvRead[i].score) >= 30 && abs(csvRead[i].score) < 45) {
-			double tmp = std::min(10000 / csvRead[i].price, 0.01*csvRead[i].dmv);
-			int tmpshare = int((multiplier*tmp + 50) / 100) * 100;	//down round share to 100
+			double tmp = std::min(multiplier*10000 / csvRead[i].price, 0.01*csvRead[i].dmv);
+			int tmpshare = int((tmp + 50) / 100) * 100;	//down round share to 100
 			share = csvRead[i].score > 0 ? tmpshare : -tmpshare;
 			//std::cout << tmp << ". tmpshare = " << tmpshare << ". share = " << share <<std::endl;
 		}
 		else if(abs(csvRead[i].score) >= 45 && abs(csvRead[i].score) < 60){
-			double tmp = std::min(20000 / csvRead[i].price, 0.01*csvRead[i].dmv);
-			int tmpshare = int((multiplier*tmp+50) / 100) * 100;	//down round share to 100
+			double tmp = std::min(multiplier * 20000 / csvRead[i].price, 0.01*csvRead[i].dmv);
+			int tmpshare = int((tmp + 50) / 100) * 100;	//down round share to 100
 			share = csvRead[i].score > 0 ? tmpshare : -tmpshare;
 			//std::cout << tmp << ". tmpshare = " << tmpshare << ". share = " << share << std::endl;
 		}
 		else if(abs(csvRead[i].score) >= 60) {
-			double tmp = std::min(30000 / csvRead[i].price, 0.01*csvRead[i].dmv);
-			int tmpshare = int((multiplier*tmp + 50) / 100) * 100;	//down round share to 100
+			double tmp = std::min(multiplier * 30000 / csvRead[i].price, 0.01*csvRead[i].dmv);
+			int tmpshare = int((tmp + 50) / 100) * 100;	//down round share to 100
 			share = csvRead[i].score > 0 ? tmpshare : -tmpshare;
 			//std::cout << tmp << ". tmpshare = " << tmpshare << ". share = " << share << std::endl;
 		}
 		if (share != 0 && csvRead[i].price>=3) {
 			stockOrder.push_back({ ticker, csvRead[i].price, share, primaryExch });
+			tradeValue += csvRead[i].price*abs(share);
 		}
 		
 	}
 	std::cout << "Generate orderlist size = " << stockOrder.size() << std::endl;
+	std::cout << "Total value of stocks = " << tradeValue << std::endl;
 
+	if (tradeValue > buyingPower) {
+		std::cout << "Buy power = " << buyingPower << ", smaller than the total trade value. Adjust the multiplier." << std::endl;
+		double newMultiplier = buyingPower / tradeValue ;
+		std::cout << "New Multiplier = " << newMultiplier << ".   " << newMultiplier* tradeValue << std::endl;
+
+		for (int i = 0; i < stockOrder.size(); i++) {
+			int tmpQty = abs(stockOrder[i].orderQty*newMultiplier);
+			int sign = stockOrder[i].orderQty > 0 ? 1 : -1;
+			tmpQty = sign * int((tmpQty + 50) / 100) * 100;	//round to 100 stocks
+			
+			stockOrder[i].orderQty = stockOrder[i].orderQty * newMultiplier;
+			std::cout << "new orderQty = " << stockOrder[i].orderQty << ". tmpQty = "<< tmpQty << std::endl;
+			stockOrder[i].orderQty = tmpQty;
+		}
+	}
+	
+	
+	
 	return stockOrder;
 }
 

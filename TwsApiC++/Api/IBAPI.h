@@ -29,7 +29,7 @@ public:
 	double roundNum(double num, double minTick);	//round price to neareast min tick
 	void FillArrivalPriceParams(Order& baseOrder, double maxPctVol, std::string riskAversion, std::string startTime, std::string endTime,
 		bool forceCompletion, bool allowPastTime, double monetaryValue);
-	std::vector<STOCK_ORD> genOrder(std::vector<CSV_READ> csvRead,double multiplier);	//generate order for trade from csv reading data, multiplier is for different accounts
+	std::vector<STOCK_ORD> genOrder(std::vector<CSV_READ> csvRead,double multiplier, double buyingPower);	//generate order for trade from csv reading data, multiplier is for different accounts
 
 
 	/**********************************************************************************************************/
