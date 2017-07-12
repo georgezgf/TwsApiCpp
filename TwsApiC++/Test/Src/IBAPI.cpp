@@ -8,6 +8,7 @@
 #include <iomanip>
 #include <algorithm>
 #include <regex>
+#include <math.h>
 
 
 
@@ -158,19 +159,19 @@ std::vector<STOCK_ORD> IBAPI::genOrder(std::vector<CSV_READ> csvRead, double mul
 
 		if (abs(csvRead[i].score) >= 30 && abs(csvRead[i].score) < 45) {
 			double tmp = std::min(multiplier*10000 / csvRead[i].price, 0.01*csvRead[i].dmv);
-			int tmpshare = int((tmp + 50) / 100) * 100;	//down round share to 100
+			int tmpshare = int(trunc(tmp / 100) * 100);	//down round share to 100
 			share = csvRead[i].score > 0 ? tmpshare : -tmpshare;
 			//std::cout << tmp << ". tmpshare = " << tmpshare << ". share = " << share <<std::endl;
 		}
 		else if(abs(csvRead[i].score) >= 45 && abs(csvRead[i].score) < 60){
 			double tmp = std::min(multiplier * 20000 / csvRead[i].price, 0.01*csvRead[i].dmv);
-			int tmpshare = int((tmp + 50) / 100) * 100;	//down round share to 100
+			int tmpshare = int(trunc(tmp / 100) * 100);	//down round share to 100
 			share = csvRead[i].score > 0 ? tmpshare : -tmpshare;
 			//std::cout << tmp << ". tmpshare = " << tmpshare << ". share = " << share << std::endl;
 		}
 		else if(abs(csvRead[i].score) >= 60) {
 			double tmp = std::min(multiplier * 30000 / csvRead[i].price, 0.01*csvRead[i].dmv);
-			int tmpshare = int((tmp + 50) / 100) * 100;	//down round share to 100
+			int tmpshare = int(trunc(tmp / 100) * 100);	//down round share to 100
 			share = csvRead[i].score > 0 ? tmpshare : -tmpshare;
 			//std::cout << tmp << ". tmpshare = " << tmpshare << ". share = " << share << std::endl;
 		}
@@ -191,7 +192,7 @@ std::vector<STOCK_ORD> IBAPI::genOrder(std::vector<CSV_READ> csvRead, double mul
 		for (int i = 0; i < stockOrder.size(); i++) {
 			int tmpQty = abs(stockOrder[i].orderQty*newMultiplier);
 			int sign = stockOrder[i].orderQty > 0 ? 1 : -1;
-			tmpQty = sign * int((tmpQty + 50) / 100) * 100;	//round to 100 stocks
+			tmpQty = sign * int(trunc(tmpQty / 100) * 100);	//round to 100 stocks
 			
 			stockOrder[i].orderQty = stockOrder[i].orderQty * newMultiplier;
 			std::cout << "new orderQty = " << stockOrder[i].orderQty << ". tmpQty = "<< tmpQty << std::endl;
