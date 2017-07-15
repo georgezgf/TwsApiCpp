@@ -124,6 +124,16 @@ std::vector<STOCK_ORD> IBAPI::genOrder(std::vector<CSV_READ> csvRead, double mul
 
 	std::cout << "Input CSVlist size = " << csvRead.size() << std::endl;
 
+	struct {
+		bool operator()(CSV_READ &a, CSV_READ &b) const
+		{
+			return abs(a.score) > abs(b.score);
+		}
+	} compareScore;
+
+	//sort the vector by the score from high to low
+	std::sort(csvRead.begin(), csvRead.end(), compareScore);
+
 	for (int i = 0; i < csvRead.size(); i++) {
 		int share = 0;
 		
@@ -152,6 +162,7 @@ std::vector<STOCK_ORD> IBAPI::genOrder(std::vector<CSV_READ> csvRead, double mul
 				primaryExch = "";
 			}
 		}
+		//std::cout << "ticker: " << csvRead[i].ticker << ". Score: " << csvRead[i].score << std::endl;
 
 		std::regex r1("\"|\\..");	//get rid of ".X" and "" for ticker in the original CSV file
 									//std::cout << std::regex_replace(tmpticker, r1, "") << std::endl;
@@ -184,20 +195,53 @@ std::vector<STOCK_ORD> IBAPI::genOrder(std::vector<CSV_READ> csvRead, double mul
 	std::cout << "Generate orderlist size = " << stockOrder.size() << std::endl;
 	std::cout << "Total value of stocks = " << tradeValue << std::endl;
 
-	if (tradeValue > buyingPower) {
-		std::cout << "Buy power = " << buyingPower << ", smaller than the total trade value. Adjust the multiplier." << std::endl;
-		double newMultiplier = buyingPower / tradeValue ;
-		std::cout << "New Multiplier = " << newMultiplier << ".   " << newMultiplier* tradeValue << std::endl;
 
-		for (int i = 0; i < stockOrder.size(); i++) {
-			int tmpQty = abs(stockOrder[i].orderQty*newMultiplier);
-			int sign = stockOrder[i].orderQty > 0 ? 1 : -1;
-			tmpQty = sign * int(trunc(tmpQty / 100) * 100);	//round to 100 stocks
+	//if stock value is larger than the total buying power, reduce the multiplier
+	if (tradeValue > buyingPower) {
+		std::cout << "Buying power = " << buyingPower << ", smaller than the total trade value. Adjust the multiplier." << std::endl;
+		double factor = buyingPower / tradeValue ;
+		std::cout << "New factor = " << factor << ".   " << std::endl;
+		double updateTradeValue = 0;
+
+		//if the factor is less than 0.67, trade less stocks (remove lower score stock) instead of reducing the factor
+		if (factor < 0.67) {
+			std::cout << "The new factor is less than 0.67. Fix the factor at 0.67, and remove from the lowest score stock until the total trade value < buying power." << std::endl;
 			
-			stockOrder[i].orderQty = stockOrder[i].orderQty * newMultiplier;
-			std::cout << "new orderQty = " << stockOrder[i].orderQty << ". tmpQty = "<< tmpQty << std::endl;
-			stockOrder[i].orderQty = tmpQty;
+			//Scale the order qty by the fixed factor 0.67
+			for (int i = 0; i < stockOrder.size(); i++) {
+				int tmpQty = abs(stockOrder[i].orderQty*0.67);
+				int sign = stockOrder[i].orderQty > 0 ? 1 : -1;
+				tmpQty = sign * int(trunc(tmpQty / 100) * 100);	//round to 100 stocks
+				//stockOrder[i].orderQty = stockOrder[i].orderQty * 0.67;
+				//std::cout << "new orderQty = " << stockOrder[i].orderQty << ". tmpQty = " << tmpQty << std::endl;
+				stockOrder[i].orderQty = tmpQty;
+				updateTradeValue += stockOrder[i].orderPrice * abs(stockOrder[i].orderQty);
+			}
+
+			//double targetTradeValue = tradeValue*0.67;
+			//std::cout << "Update trade value = " << targetTradeValue << std::endl;
+
+			//remove from the lowest score stock one by one until the update trade value is less than target trade value (0.67*tradevalue)
+			while (updateTradeValue > buyingPower) {
+				std::cout << "Remove stock: " << stockOrder.back().ticker << std::endl;
+				updateTradeValue -= stockOrder.back().orderPrice * abs(stockOrder.back().orderQty);
+				std::cout << "Update trade value = " << updateTradeValue << ". Order size=" << stockOrder.size() <<std::endl;
+				stockOrder.pop_back();
+			}
 		}
+		else {
+			for (int i = 0; i < stockOrder.size(); i++) {
+				int tmpQty = abs(stockOrder[i].orderQty*factor);
+				int sign = stockOrder[i].orderQty > 0 ? 1 : -1;
+				tmpQty = sign * int(trunc(tmpQty / 100) * 100);	//round to 100 stocks
+				//stockOrder[i].orderQty = stockOrder[i].orderQty * factor;
+				//std::cout << "new orderQty = " << stockOrder[i].orderQty << ". tmpQty = " << tmpQty << std::endl;
+				stockOrder[i].orderQty = tmpQty;
+				updateTradeValue += stockOrder[i].orderPrice * abs(stockOrder[i].orderQty);
+			}
+		}
+		std::cout << "Update trade value = " << updateTradeValue << std::endl;
+	
 	}
 	
 	
