@@ -221,8 +221,8 @@ std::vector<STOCK_ORD> IBAPI::genOrder(std::vector<CSV_READ> csvRead, double mul
 			//double targetTradeValue = tradeValue*0.67;
 			//std::cout << "Update trade value = " << targetTradeValue << std::endl;
 
-			//remove from the lowest score stock one by one until the update trade value is less than target trade value (0.67*tradevalue)
-			while (updateTradeValue > buyingPower) {
+			//remove from the lowest score stock one by one until the update trade value is less than 95% of the buying power
+			while (updateTradeValue > 0.95 * buyingPower) {
 				std::cout << "Remove stock: " << stockOrder.back().ticker << std::endl;
 				updateTradeValue -= stockOrder.back().orderPrice * abs(stockOrder.back().orderQty);
 				std::cout << "Update trade value = " << updateTradeValue << ". Order size=" << stockOrder.size() <<std::endl;
