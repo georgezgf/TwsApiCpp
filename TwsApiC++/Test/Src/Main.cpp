@@ -144,6 +144,8 @@ int main(int argc, char *argv[])
 #ifdef READCSV
 	
 		std::string csvFile = "D:\\Dropbox\\Public\\Finance\\syncFile\\UEI001\\erst.UEI001." + buffers + ".csv";
+		//std::string csvFile = "D:\\Dropbox\\Public\\Finance\\syncFile\\UEI001\\erst.UEI001.2017-07-20.csv";
+
 
 		std::vector<CSV_READ> CSVRead = testAPI.getCSV(csvFile);
 
@@ -169,6 +171,9 @@ int main(int argc, char *argv[])
 			std::cout << "Ticker: " << gOrder[i].ticker << ". Primary exchange: " << gOrder[i].primaryExch << ". Price: " << gOrder[i].orderPrice << ". share: " << gOrder[i].orderQty << std::endl;
 		}
 
+		std::vector<double> csvHedge = testAPI.csvHedge(CSVRead, gOrder);
+
+
 #endif
 		/*
 		std::cout << "Continue program? (y/n)";
@@ -185,7 +190,7 @@ int main(int argc, char *argv[])
 #ifdef SUBMITORDER
 		
 		//If everything is OK, submit open market arrival price orders
-		std::vector<int> openOrderList = testAPI.openMktAP(gOrder, 0.05, "Passive", openStartTime, openEndTime, true, false, 100000);
+		std::vector<int> openOrderList = testAPI.openMktAP(gOrder, 0.05, "Passive", openStartTime, openEndTime, false, false, 100000);
 		
 		//Every 1 min, read open orders, total 15mins
 		for (int i = 0; i < 25; i++) {
@@ -229,8 +234,13 @@ int main(int argc, char *argv[])
 		double cash = testAPI.queryCash();
 		std::cout << "Cash = " << cash << std::endl;
 		
-		double bp = testAPI.queryBuyingPower();
-		std::cout << "Buying power = " << bp << std::endl;
+//		double bp = testAPI.queryBuyingPower();
+//		std::cout << "Buying power = " << bp << std::endl;
+
+		std::vector<std::string> queryList{ "SPY","IWM" };
+
+		testAPI.queryQuote(queryList);
+	
 #endif
 
 

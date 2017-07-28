@@ -38,6 +38,8 @@ struct STOCK_ORD {
 	double orderPrice;
 	int orderQty;
 	std::string primaryExch;
+	double nnlsSPX;
+	double nnlsRUT;
 };
 
 struct MODIFY_ORD {
@@ -67,4 +69,6 @@ struct CSV_READ {
 	double score;
 	double price;
 	int dmv;
+	double nnlsSPX;
+	double nnlsRUT;
 };
