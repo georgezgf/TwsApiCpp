@@ -12,8 +12,8 @@ using namespace TwsApi;
 #define PrintProcessId printf("%ld  ", CurrentThreadId() )
 
 #define READCSV		//uncomment this to read CSV files
-#define SUBMITORDER	//uncomment this to submit open and close orders
-//#define TESTFUN		//uncomment this to test functions
+//#define SUBMITORDER	//uncomment this to submit open and close orders
+#define TESTFUN		//uncomment this to test functions
 
 int main(int argc, char *argv[])
 {
@@ -88,13 +88,18 @@ int main(int argc, char *argv[])
 		std::map<std::string, QUOTE_DATA> quoteMap;
 		std::vector<POS> allPos;
 		std::map<int, COMB_OPENORD> combOrd;
+
+		//std::vector<std::string> tickerList{ "SPY","IWM" };
+
+		
+		//quoteMap = testAPI.queryQuote(tickerList);
 		/*
-		quoteMap = testAPI.queryQuote(tickerList);
+		quoteMap = testAPI.queryClose(tickerList);
 
 		for (int i = 0; i < tickerList.size(); i++) {
 			std::cout << "Ticker: " << tickerList[i] << ". Ask: " << quoteMap[tickerList[i]].askPrice[0]
 				<< ". Bid: " << quoteMap[tickerList[i]].bidPrice[0] << ". Ask size: " << quoteMap[tickerList[i]].askSize[0]
-				<< ". Bid size: " << quoteMap[tickerList[i]].bidSize[0] << std::endl;
+				<< ". Bid size: " << quoteMap[tickerList[i]].bidSize[0] << ". close price: " << quoteMap[tickerList[i]].close[0] << std::endl;
 		}
 		*/
 		//int orderID = testAPI.queryNextOrderId();
@@ -143,8 +148,8 @@ int main(int argc, char *argv[])
 
 #ifdef READCSV
 	
-		std::string csvFile = "D:\\Dropbox\\Public\\Finance\\syncFile\\UEI001\\erst.UEI001." + buffers + ".csv";
-		//std::string csvFile = "D:\\Dropbox\\Public\\Finance\\syncFile\\UEI001\\erst.UEI001.2017-07-20.csv";
+		//std::string csvFile = "D:\\Dropbox\\Public\\Finance\\syncFile\\UEI001\\erst.UEI001." + buffers + ".csv";
+		std::string csvFile = "D:\\Dropbox\\Public\\Finance\\syncFile\\UEI001\\erst.UEI001.2017-07-28.csv";
 
 
 		std::vector<CSV_READ> CSVRead = testAPI.getCSV(csvFile);
@@ -167,13 +172,18 @@ int main(int argc, char *argv[])
 			std::cout << "There is no stock to trade today. Stop program" << std::endl;
 			return 1;
 		}
+
 		for (int i = 0; i < gOrder.size(); i++) {
 			std::cout << "Ticker: " << gOrder[i].ticker << ". Primary exchange: " << gOrder[i].primaryExch << ". Price: " << gOrder[i].orderPrice << ". share: " << gOrder[i].orderQty << std::endl;
 		}
+		
+		std::vector<double> exposure = testAPI.orderHedgeCal(CSVRead, gOrder);
+		
+		std::vector<STOCK_ORD> hedgeOrder = testAPI.genHedgeOrder(exposure[0], exposure[1]);
 
-		std::vector<double> csvHedge = testAPI.csvHedge(CSVRead, gOrder);
+		gOrder.insert(gOrder.end(), hedgeOrder.begin(), hedgeOrder.end());
 
-
+		
 #endif
 		/*
 		std::cout << "Continue program? (y/n)";
@@ -237,10 +247,9 @@ int main(int argc, char *argv[])
 //		double bp = testAPI.queryBuyingPower();
 //		std::cout << "Buying power = " << bp << std::endl;
 
-		std::vector<std::string> queryList{ "SPY","IWM" };
-
-		testAPI.queryQuote(queryList);
 	
+		//testAPI.EC->reqMktData(100, ContractSamples::USStock("SPY"), "", false);
+		//Sleep(5000);
 #endif
 
 

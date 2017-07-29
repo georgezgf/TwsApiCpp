@@ -241,7 +241,7 @@ std::vector<STOCK_ORD> IBAPI::genOrder(std::vector<CSV_READ> csvRead, double mul
 			//std::cout << "Update trade value = " << targetTradeValue << std::endl;
 
 			//remove from the lowest score stock one by one until the update trade value is less than 95% of the buying power
-			while (updateTradeValue > 0.95 * buyingPower) {
+			while (updateTradeValue > 0.9 * buyingPower) {
 				std::cout << "Remove stock: " << stockOrder.back().ticker << std::endl;
 				updateTradeValue -= stockOrder.back().orderPrice * abs(stockOrder.back().orderQty);
 				std::cout << "Update trade value = " << updateTradeValue << ". Order size=" << stockOrder.size() <<std::endl;
@@ -269,8 +269,8 @@ std::vector<STOCK_ORD> IBAPI::genOrder(std::vector<CSV_READ> csvRead, double mul
 	return stockOrder;
 }
 
-std::vector<double> IBAPI::csvHedge(std::vector<CSV_READ> csvRead, std::vector<STOCK_ORD> stockOrd) {
-	printInfo("Generate hedge orders. ");
+std::vector<double> IBAPI::orderHedgeCal(std::vector<CSV_READ> csvRead, std::vector<STOCK_ORD> stockOrd) {
+	printInfo("Calculate hedge exposure. ");
 
 	std::vector<double> exposure;
 
@@ -291,6 +291,35 @@ std::vector<double> IBAPI::csvHedge(std::vector<CSV_READ> csvRead, std::vector<S
 	return exposure;
 }
 
+
+std::vector<STOCK_ORD> IBAPI::genHedgeOrder(double SPXexp, double RUTexp) {
+	printInfo("Generate hedge orders. ");
+
+	std::vector<STOCK_ORD> hedgeOrder;
+	std::vector<std::string> hedgeList{ "SPY", "IWM" };
+	std::map<std::string,QUOTE_DATA>hedgePrice = queryClose(hedgeList);
+
+	double SPYclose = hedgePrice["SPY"].close[0];
+	double IWMclose = hedgePrice["IWM"].close[0];
+
+	std::cout << "SPX close: " << SPYclose << ". RUT close: " << IWMclose << std::endl;
+
+	if (SPYclose <= 0 | IWMclose <= 0) {
+		std::cout << "Get hedge close price failed. Use default value." << std::endl;
+		SPYclose = 247;
+		IWMclose = 142;
+	}
+
+	int SPYqty = -int(trunc(SPXexp / SPYclose / 100) * 100);
+	int IWMqty = -int(trunc(RUTexp / IWMclose / 100) * 100);
+
+	hedgeOrder.push_back({ "SPY", -1, SPYqty });
+	hedgeOrder.push_back({ "IWM", -1, IWMqty });
+
+	std::cout << "SPX hedge qty: " << SPYqty << ". RUT hedge qty: " << IWMqty << std::endl;
+
+	return hedgeOrder;
+}
 
 
 /**********************************************************************************************************/
@@ -372,7 +401,7 @@ std::string IBAPI::queryPriExch(std::string ticker) {
 
 std::map<std::string, QUOTE_DATA> IBAPI::queryQuote(std::vector<std::string> tickerList) {
 
-	printInfo("Query Quote. ");
+	printInfo("Query Quote ask, bid, asksize, bidsize. ");
 
 	quoteMap.clear();
 	
@@ -417,6 +446,55 @@ std::map<std::string, QUOTE_DATA> IBAPI::queryQuote(std::vector<std::string> tic
 
 	return quoteMap;
 	
+}
+
+std::map<std::string, QUOTE_DATA> IBAPI::queryClose(std::vector<std::string> tickerList) {
+
+	printInfo("Query close price. ");
+
+	quoteMap.clear();
+
+	EW.init_tickData();	// Initialize tickdata size and reset n_quote to 0
+
+	for (int i = 0; i < tickerList.size(); i++) {
+		EC->reqMktData(i, ContractSamples::USStock(tickerList[i]), "", false);
+	}
+
+	// Check if every data is read
+	bool Ready = false;
+	bool tmp;
+	int count = 0;
+
+	while (!Ready) {
+		Ready = true;
+		Sleep(100);
+		count++;
+		for (int i = 0; i < tickerList.size(); i++) {
+			// Check if all data in tickData is ready. For every tickerId, need every entry(askprice, bidprice, asksize, bidsize) to be called at least once
+			tmp = ( EW.n_quoteStatus[i].n_close > 0);
+
+			//std::cout <<"tickerId = " << i << ". n_askprice, n_bidprice, n_asksize, n_bidsize = " << EW.n_quoteStatus[i].n_askprice << EW.n_quoteStatus[i].n_bidprice
+			//<< EW.n_quoteStatus[i].n_asksize << EW.n_quoteStatus[i].n_bidsize << std::endl;
+			Ready = Ready & tmp;
+		}
+		//std::cout << "Ready = " << Ready << std::endl;
+
+		if (count > 100) {
+			std::cout << "Request close price time out. Break." << std::endl;
+			break;
+		}
+	}
+
+	for (int i = 0; i < tickerList.size(); i++) {
+		EC->cancelMktData(i);
+	}
+
+	for (int i = 0; i < tickerList.size(); i++) {
+		quoteMap[tickerList[i]] = EW.tickData[i];
+	}
+
+	return quoteMap;
+
 }
 
 std::vector<POS> IBAPI::queryPos() {

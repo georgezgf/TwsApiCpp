@@ -85,6 +85,11 @@ void MyEWrapper::tickPrice(TickerId tickerId, TickType field, double price, int 
 			n_quoteStatus[tickerId].n_askprice++;
 			//std::cout << "ask = " << tickData[tickerId].askPrice[0] << std::endl;
 			break;
+		case CLOSE:
+			tickData[tickerId].close[0] = price;
+			n_quoteStatus[tickerId].n_close++;
+			//std::cout << "close = " << tickData[tickerId].close[0] << std::endl;
+			break;
 		}
 		
 		

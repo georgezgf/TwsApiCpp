@@ -1,6 +1,8 @@
 ﻿  TwsApiL0.cpp
 C:\Users\Gufeng Zhang\TwsApiCpp-master\source\PosixClient\Shared\OrderSamples.h(8): warning C4099: 'Order': type name first seen using 'struct' now seen using 'class'
   c:\users\gufeng zhang\twsapicpp-master\source\posixclient\shared\Order.h(42): note: see declaration of 'Order'
+C:\Users\Gufeng Zhang\TwsApiCpp-master\source\PosixClient\Shared\ContractSamples.h(5): warning C4099: 'Contract': type name first seen using 'struct' now seen using 'class'
+  C:\Users\Gufeng Zhang\TwsApiCpp-master\source\PosixClient\Shared\Contract.h(69): note: see declaration of 'Contract'
 c:\users\gufeng zhang\twsapicpp-master\source\posixclient\src\EPosixClientSocketPlatform.h(14): warning C4005: 'EISCONN': macro redefinition
   C:\Program Files (x86)\Windows Kits\10\Include\10.0.15063.0\ucrt\errno.h(97): note: see previous definition of 'EISCONN'
 c:\users\gufeng zhang\twsapicpp-master\source\posixclient\src\EPosixClientSocketPlatform.h(15): warning C4005: 'EWOULDBLOCK': macro redefinition

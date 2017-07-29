@@ -9,6 +9,7 @@ struct QUOTE_DATA {
 	double bidPrice[10];
 	double askPrice[10];
 	int askSize[10];
+	double close[10];	//10 for deep market data
 };
 
 struct OPEN_ORD {
@@ -62,6 +63,7 @@ struct N_QUOTE_STATUS {
 	int n_askprice;
 	int n_bidsize;
 	int n_asksize;
+	int n_close;
 };
 
 struct CSV_READ {

@@ -32,14 +32,16 @@ public:
 	void FillVwapParams(Order baseOrder, double maxPctVol, std::string startTime, std::string endTime,
 		bool allowPastEndTime, bool noTakeLiq, bool speedUp, double monetaryValue);
 	std::vector<STOCK_ORD> genOrder(std::vector<CSV_READ> csvRead,double multiplier, double buyingPower);	//generate order for trade from csv reading data, multiplier is for different accounts
-	std::vector<double> csvHedge(std::vector<CSV_READ> csvRead, std::vector<STOCK_ORD> stockOrd);
+	std::vector<double> orderHedgeCal(std::vector<CSV_READ> csvRead, std::vector<STOCK_ORD> stockOrd);	//calculate the exposure of SPY and IWM. Need the generated stock order and csv file
+	std::vector<STOCK_ORD> genHedgeOrder(double SPXexp, double RUTexp);	//generate hedge orders according to the exposure
 	void monitorExp(std::vector<STOCK_ORD> orderList);
 
 	/**********************************************************************************************************/
 	/*basic trade functions*/
 	void waitForNextValidId();
 	int queryNextOrderId();
-	std::map<std::string, QUOTE_DATA> queryQuote(std::vector<std::string> tickerList);
+	std::map<std::string, QUOTE_DATA> queryQuote(std::vector<std::string> tickerList); //query bid, ask, bidsize, asksize real time
+	std::map<std::string, QUOTE_DATA> queryClose(std::vector<std::string> tickerList); //query close price
 	std::vector<POS> queryPos();
 	std::map<int, COMB_OPENORD> queryOrd();
 	int queryCash();
