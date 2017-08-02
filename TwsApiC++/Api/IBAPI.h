@@ -29,10 +29,10 @@ public:
 	double roundNum(double num, double minTick);	//round price to neareast min tick
 	void FillArrivalPriceParams(Order& baseOrder, double maxPctVol, std::string riskAversion, std::string startTime, std::string endTime,
 		bool forceCompletion, bool allowPastTime, double monetaryValue);
-	void FillVwapParams(Order baseOrder, double maxPctVol, std::string startTime, std::string endTime,
+	void FillVwapParams(Order& baseOrder, double maxPctVol, std::string startTime, std::string endTime,
 		bool allowPastEndTime, bool noTakeLiq, bool speedUp, double monetaryValue);
 	std::vector<STOCK_ORD> genOrder(std::vector<CSV_READ> csvRead,double multiplier, double buyingPower);	//generate order for trade from csv reading data, multiplier is for different accounts
-	std::vector<double> orderHedgeCal(std::vector<CSV_READ> csvRead, std::vector<STOCK_ORD> stockOrd);	//calculate the exposure of SPY and IWM. Need the generated stock order and csv file
+	std::vector<double> orderHedgeCal(std::vector<STOCK_ORD> stockOrd);	//calculate the exposure of SPY and IWM. Need the generated stock order and csv file
 	std::vector<STOCK_ORD> genHedgeOrder(double SPXexp, double RUTexp);	//generate hedge orders according to the exposure
 	void monitorExp(std::vector<STOCK_ORD> orderList);
 
@@ -69,6 +69,8 @@ public:
 		bool allowPastEndTime, bool noTakeLiq, bool speedUp, double monetaryValue);	//close certain positions using VWAP algo
 	std::vector<int> openMktAP(std::vector<STOCK_ORD> stockOrd, double maxPctVol, std::string riskAversion, std::string startTime, std::string endTime,
 		bool forceCompletion, bool allowPastTime, double monetaryValue); //submit arrival price orders at open market time
+	std::vector<int> openMktVWAP(std::vector<STOCK_ORD> stockOrd, double maxPctVol, std::string startTime, std::string endTime,
+		bool allowPastEndTime, bool noTakeLiq, bool speedUp, double monetaryValue);
 };
 
 

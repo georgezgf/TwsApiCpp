@@ -12,8 +12,8 @@ using namespace TwsApi;
 #define PrintProcessId printf("%ld  ", CurrentThreadId() )
 
 #define READCSV		//uncomment this to read CSV files
-//#define SUBMITORDER	//uncomment this to submit open and close orders
-#define TESTFUN		//uncomment this to test functions
+#define SUBMITORDER	//uncomment this to submit open and close orders
+//#define TESTFUN		//uncomment this to test functions
 
 int main(int argc, char *argv[])
 {
@@ -148,8 +148,8 @@ int main(int argc, char *argv[])
 
 #ifdef READCSV
 	
-		//std::string csvFile = "D:\\Dropbox\\Public\\Finance\\syncFile\\UEI001\\erst.UEI001." + buffers + ".csv";
-		std::string csvFile = "D:\\Dropbox\\Public\\Finance\\syncFile\\UEI001\\erst.UEI001.2017-07-28.csv";
+		std::string csvFile = "D:\\Dropbox\\Public\\Finance\\syncFile\\UEI001\\erst.UEI001." + buffers + ".csv";
+		//std::string csvFile = "D:\\Dropbox\\Public\\Finance\\syncFile\\UEI001\\erst.UEI001.2017-07-28.csv";
 
 
 		std::vector<CSV_READ> CSVRead = testAPI.getCSV(csvFile);
@@ -160,7 +160,7 @@ int main(int argc, char *argv[])
 		}
 
 		for (int i = 0; i < CSVRead.size(); i++) {
-			std::cout << "Ticker: " << CSVRead[i].ticker << " Score = " << CSVRead[i].score << ". Price: " << CSVRead[i].price << ". DMV: " << CSVRead[i].dmv << std::endl;
+			std::cout << "Ticker: " << CSVRead[i].ticker << " Score = " << CSVRead[i].score << ". Price: " << CSVRead[i].price << ". DMV: " << CSVRead[i].dmv << "\n";
 		}
 
 		double bp = testAPI.queryBuyingPower();
@@ -174,16 +174,20 @@ int main(int argc, char *argv[])
 		}
 
 		for (int i = 0; i < gOrder.size(); i++) {
-			std::cout << "Ticker: " << gOrder[i].ticker << ". Primary exchange: " << gOrder[i].primaryExch << ". Price: " << gOrder[i].orderPrice << ". share: " << gOrder[i].orderQty << std::endl;
+			std::cout << "Ticker: " << gOrder[i].ticker << ". Primary exchange: " << gOrder[i].primaryExch << ". Price: " << gOrder[i].orderPrice << ". share: " << gOrder[i].orderQty << "\n";
 		}
 		
-		std::vector<double> exposure = testAPI.orderHedgeCal(CSVRead, gOrder);
+		std::vector<double> exposure = testAPI.orderHedgeCal(gOrder);
 		
 		std::vector<STOCK_ORD> hedgeOrder = testAPI.genHedgeOrder(exposure[0], exposure[1]);
 
-		gOrder.insert(gOrder.end(), hedgeOrder.begin(), hedgeOrder.end());
+		//combine stock orders and hedge orders
+		std::vector<STOCK_ORD> totalOrder;
+		totalOrder.reserve(gOrder.size() + hedgeOrder.size());
+		totalOrder.insert(totalOrder.end(), gOrder.begin(), gOrder.end());
+		totalOrder.insert(totalOrder.end(), hedgeOrder.begin(), hedgeOrder.end());
 
-		
+	
 #endif
 		/*
 		std::cout << "Continue program? (y/n)";
@@ -200,20 +204,28 @@ int main(int argc, char *argv[])
 #ifdef SUBMITORDER
 		
 		//If everything is OK, submit open market arrival price orders
-		std::vector<int> openOrderList = testAPI.openMktAP(gOrder, 0.05, "Passive", openStartTime, openEndTime, false, false, 100000);
+		//std::vector<int> openOrderList = testAPI.openMktAP(gOrder, 0.05, "Passive", openStartTime, openEndTime, false, false, 100000);
+		//std::vector<int> hedgeOrderList = testAPI.openMktAP(hedgeOrder, 0.05, "Passive", openStartTime, openEndTime, false, true, 100000);
+		//testAPI.EC->reqGlobalCancel();
 		
+		std::vector<int> openOrderList = testAPI.openMktVWAP(gOrder, 0.05, openStartTime, openEndTime, false, false, false, 100000);
+		//std::vector<int> hedgeOrderList = testAPI.openMktVWAP(hedgeOrder, 0.05, closeStartTime, closeEndTime, false, false, true, 100000);
+		
+		Sleep(3000 * 60);
+
 		//Every 1 min, read open orders, total 15mins
-		for (int i = 0; i < 25; i++) {
+		for (int i = 0; i < 40; i++) {
 			
 			combOrd = testAPI.queryOrd();
 
 			std::cout << "Open order size =" << combOrd.size() << std::endl;
 
-			for (std::map<int, COMB_OPENORD>::iterator it = combOrd.begin(); it != combOrd.end(); ++it) {
-				std::cout << it->first << " => " << (it->second).openOrd.ticker << " action:" << (it->second).openOrd.action << " totalQty: " << (it->second).openOrd.totalQty
-					<< ". Remaining: " << (it->second).ordStatus.remaining << ". ClientId: " << (it->second).ordStatus.clientId << "\n";
+//			for (std::map<int, COMB_OPENORD>::iterator it = combOrd.begin(); it != combOrd.end(); ++it) {
+//				std::cout << it->first << " => " << (it->second).openOrd.ticker << " action:" << (it->second).openOrd.action << " totalQty: " << (it->second).openOrd.totalQty
+//					<< ". Remaining: " << (it->second).ordStatus.remaining << ". ClientId: " << (it->second).ordStatus.clientId << "\n";
+//			}
 
-			}
+			testAPI.monitorExp(gOrder);
 
 			if (combOrd.size() == 0) {
 				allPos = testAPI.queryPos();
@@ -222,7 +234,7 @@ int main(int argc, char *argv[])
 
 				for (int i = 0; i < allPos.size(); i++) {
 					std::cout << "Ticker: " << allPos[i].ticker << ". Security type: " << allPos[i].secType << ". Position: " 
-						<< allPos[i].posQty << ". Avg cost: " << allPos[i].avgCost << std::endl;
+						<< allPos[i].posQty << ". Avg cost: " << allPos[i].avgCost << "\n";
 				}
 
 				break;
@@ -231,11 +243,19 @@ int main(int argc, char *argv[])
 			Sleep(1000 * 60);	//sleep for 1 min
 		}
 		
+		
+
 		/*
 		std::cout << "Enter to continue program";
 		std::cin.ignore();
 		//*/
-		testAPI.closePartAP(gOrder, 0.05, "Passive", closeStartTime, closeEndTime, true, false, 100000);
+
+		//testAPI.EC->reqGlobalCancel();
+
+		//Sleep(5000);
+
+		testAPI.closePartVWAP(gOrder, 0.05, closeStartTime, closeEndTime, true, false, false, 100000);
+		//testAPI.closePartAP(gOrder, 0.05, "Passive", closeStartTime, closeEndTime, true, false, 100000);
 		//testAPI.closeAllStockAP( 0.05, "Passive", closeStartTime, closeEndTime, true, false, 100000);
 		
 #endif
