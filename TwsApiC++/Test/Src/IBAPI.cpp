@@ -56,12 +56,14 @@ std::vector<CSV_READ> IBAPI::getCSV(std::string str) {
 		if (count != 0) {
 			std::string ticker = (*loop)[0];
 			double score = std::stod((*loop)[1]);
-			double price = std::stod((*loop)[2]);
-			int dmv = std::stoi((*loop)[3]);
-			double nnlsSPX = std::stod((*loop)[4]);
-			double nnlsRUT = std::stod((*loop)[5]);
+			int day2er = std::stoi((*loop)[2]);	//for limit on open orders price adjustment
+			double price = std::stod((*loop)[3]);
+			int dmv = std::stoi((*loop)[4]);
+			double nnlsSPX = std::stod((*loop)[5]);
+			double nnlsRUT = std::stod((*loop)[6]);
+			double lmtPrice = std::stod((*loop)[7]);
 
-			tmpCSVRead = { ticker, score, price, dmv, nnlsSPX, nnlsRUT };
+			tmpCSVRead = { ticker, score, day2er, price, dmv, nnlsSPX, nnlsRUT, lmtPrice };
 
 			CSVRead.push_back(tmpCSVRead);
 		}
@@ -71,29 +73,37 @@ std::vector<CSV_READ> IBAPI::getCSV(std::string str) {
 	return CSVRead;
 }
 
-double IBAPI::roundNum(double num, double minTick) {
+double IBAPI::roundNum(int share, double num, double minTick) {
 	double tmpMinTick;
 
-	if (minTick <= 0.05) {
-		tmpMinTick = 0.05;
+	if (minTick <= 0.01) {
+		return num;
 	}
-	else {
+	else {	//minTick = 0.05.
 		tmpMinTick = minTick;
+		int inum = int(round(num * 100));
+		int iminTick = int(tmpMinTick * 100);
+		int remain = inum % iminTick;
+		int fac = inum / iminTick;
+
+		if (remain == 0) {
+			return double(inum) / 100;
+		}
+		else {// up round for sell order, down round for buy order
+			if (share < 0) {
+				return double((fac + 1)*iminTick) / 100;
+			}
+			else {
+				return double(fac*iminTick) / 100;
+			}
+		}
+		
+//		if (remain == 0) {
+//			return double(inum) / 100;
+//		}
+//		inum = remain < double(iminTick) / 2 ? inum - remain : inum + iminTick - remain;
+//		return double(inum) / 100;
 	}
-
-	int inum = int(round(num * 100));
-	int iminTick = int(tmpMinTick * 100);
-	
-	int remain = inum % iminTick;
-
-	//std::cout << "remain = " << remain << std::endl;
-
-	if (remain == 0) {
-		return double(inum) / 100;
-	}
-	
-	inum = remain < double(iminTick) / 2 ? inum - remain : inum + iminTick - remain;
-	return double(inum) / 100;
 	
 }
 
@@ -209,7 +219,7 @@ std::vector<STOCK_ORD> IBAPI::genOrder(std::vector<CSV_READ> csvRead, double mul
 			//std::cout << tmp << ". tmpshare = " << tmpshare << ". share = " << share << std::endl;
 		}
 		if (share != 0 && csvRead[i].price>=3) {
-			stockOrder.push_back({ ticker, csvRead[i].price, share, primaryExch,csvRead[i].nnlsSPX,csvRead[i].nnlsRUT });
+			stockOrder.push_back({ ticker, csvRead[i].lmtPrice, share, primaryExch,csvRead[i].nnlsSPX,csvRead[i].nnlsRUT });
 			tradeValue += csvRead[i].price*abs(share);
 		}
 		
@@ -683,6 +693,74 @@ std::vector<int> IBAPI::sendLmtOrder(std::vector<STOCK_ORD> lmtOrder) {
 	return orderIdList;
 }
 
+std::vector<int> IBAPI::sendLOOOrder(std::vector<STOCK_ORD> looOrder) {
+	printInfo("Send limit on open orders. ");
+	EW.combOpenOrd.clear();
+	EW.b_openOrdReady = false;
+
+	std::string action;
+	std::vector<int> orderIdList;
+	int count = 0;
+	int orderId = queryNextOrderId();
+
+	for (int i = 0; i < looOrder.size(); i++) {
+		action = looOrder[i].orderQty > 0 ? "BUY" : "SELL";
+		//double minTick = queryMinTick(looOrder[i].ticker);
+		EC->placeOrder(EW.m_orderId++, ContractSamples::USStock(looOrder[i].ticker, looOrder[i].primaryExch), OrderSamples::LimitOnOpen(action, abs(looOrder[i].orderQty), looOrder[i].orderPrice));
+	}
+
+	while (!EW.b_openOrdReady) {
+		Sleep(100);
+		count++;
+		if (count > 20) {
+			std::cout << "Open order call back time out. Break." << std::endl;
+			break;
+		}
+	}
+
+	for (std::map<int, COMB_OPENORD>::iterator it = EW.combOpenOrd.begin(); it != EW.combOpenOrd.end(); ++it) {
+		orderIdList.push_back(it->first);
+	}
+
+	std::cout << "Send limit on open order finish. Submit order size = " << orderIdList.size() << std::endl;
+
+	return orderIdList;
+}
+
+
+std::vector<int> IBAPI::sendAucOrder(std::vector<STOCK_ORD> aucOrder) {
+	printInfo("Send auction orders. ");
+	EW.combOpenOrd.clear();
+	EW.b_openOrdReady = false;
+
+	std::string action;
+	std::vector<int> orderIdList;
+	int count = 0;
+	int orderId = queryNextOrderId();
+
+	for (int i = 0; i < aucOrder.size(); i++) {
+		action = aucOrder[i].orderQty > 0 ? "BUY" : "SELL";
+		EC->placeOrder(EW.m_orderId++, ContractSamples::USStock(aucOrder[i].ticker, aucOrder[i].primaryExch), OrderSamples::AtAuction(action, abs(aucOrder[i].orderQty), aucOrder[i].orderPrice));
+	}
+
+	while (!EW.b_openOrdReady) {
+		Sleep(100);
+		count++;
+		if (count > 20) {
+			std::cout << "Open order call back time out. Break." << std::endl;
+			break;
+		}
+	}
+
+	for (std::map<int, COMB_OPENORD>::iterator it = EW.combOpenOrd.begin(); it != EW.combOpenOrd.end(); ++it) {
+		orderIdList.push_back(it->first);
+	}
+
+	std::cout << "Send auction orders finish. Submit order size = " << orderIdList.size() << std::endl;
+
+	return orderIdList;
+}
+
 std::vector<int> IBAPI::sendAPOrder(std::vector<STOCK_ORD> APOrder, double maxPctVol, std::string riskAversion, std::string startTime, std::string endTime,
 	bool forceCompletion, bool allowPastTime, double monetaryValue) {
 
@@ -938,12 +1016,13 @@ void IBAPI::updateOrder(std::vector<int> orderIdList, double aggBps, int waitTim
 			myBps = spreadBps < aggBps ? spreadBps : aggBps;
 
 			//orderQty>0: BUY, update price = bid price + aggbps; orderQty<0: SELL, update price = ask price - aggbps
-			bid = roundNum(quoteData[tickerList[i]].bidPrice[0] * (1 + myBps / 10000), orderUpdate[i].minTick);	//round price to two digits after decimal and the minTick
-			ask = roundNum(quoteData[tickerList[i]].askPrice[0] * (1 - myBps / 10000), orderUpdate[i].minTick);
-			orderUpdate[i].orderPrice = orderUpdate[i].orderQty>0 ? bid :ask;
+			//comment the following five lines because of the change of roundNum function
+//			bid = roundNum(quoteData[tickerList[i]].bidPrice[0] * (1 + myBps / 10000), orderUpdate[i].minTick);	//round price to two digits after decimal and the minTick
+//			ask = roundNum(quoteData[tickerList[i]].askPrice[0] * (1 - myBps / 10000), orderUpdate[i].minTick);
+//			orderUpdate[i].orderPrice = orderUpdate[i].orderQty>0 ? bid :ask;
 
-			std::cout << "ticker: " << orderUpdate[i].ticker << ". Spread bps = " << spreadBps << ". mybps = " << myBps << "Min tick = " << orderUpdate[i].minTick
-				<< ". update price: " << orderUpdate[i].orderPrice << " quantity: " << orderUpdate[i].orderQty << std::endl;
+//			std::cout << "ticker: " << orderUpdate[i].ticker << ". Spread bps = " << spreadBps << ". mybps = " << myBps << "Min tick = " << orderUpdate[i].minTick
+//				<< ". update price: " << orderUpdate[i].orderPrice << " quantity: " << orderUpdate[i].orderQty << std::endl;
 		}
 
 		//myOrderIdList = modifyLmtOrder(orderUpdate);
@@ -1025,6 +1104,8 @@ void IBAPI::closePartAP(std::vector<STOCK_ORD> orderList, double maxPctVol, std:
 
 	std::vector<std::string> orderTicker;
 	std::vector<STOCK_ORD> closeOrd;
+	std::map<std::string, STOCK_ORD> orderMap;
+	std::vector<std::string>::iterator it;
 	bool zeroPos = true;	// make sure there is position to close.
 
 	std::vector<POS> Position = queryPos();
@@ -1036,12 +1117,15 @@ void IBAPI::closePartAP(std::vector<STOCK_ORD> orderList, double maxPctVol, std:
 
 	for (int i = 0; i < orderList.size(); i++) {
 		orderTicker.push_back(orderList[i].ticker);
+		orderMap[orderList[i].ticker] = orderList[i];	//convert the stock order to ticker->stockorder map
 	}
 	
 	//Exctract positions that are in the order ticker lists to generate close orders
 	for (int i = 0; i < Position.size(); i++) {
-		if (Position[i].posQty != 0 && std::find(orderTicker.begin(), orderTicker.end(), Position[i].ticker) != orderTicker.end()) {
-			std::string primaryExchange = queryPriExch(Position[i].ticker);
+		it = std::find(orderTicker.begin(), orderTicker.end(), Position[i].ticker);
+		if (Position[i].posQty != 0 && it != orderTicker.end()) {
+			std::string primaryExchange = orderMap[*it].primaryExch;
+			
 			// posQty>0: buy position. Need to sell at ask price to close; 
 			// posQty<0: sell position. Need to buy at bid price to close.
 			STOCK_ORD tmpOrd = { Position[i].ticker, -1, -Position[i].posQty, primaryExchange };	//set price to -1 due to market order

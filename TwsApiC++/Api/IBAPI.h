@@ -26,7 +26,7 @@ public:
 	/*general functions*/
 	void printInfo(std::string info);
 	std::vector<CSV_READ> getCSV(std::string str);
-	double roundNum(double num, double minTick);	//round price to neareast min tick
+	double roundNum(int share, double num, double minTick);	//round price according to  mintick. Up round for sell, down round for buy
 	void FillArrivalPriceParams(Order& baseOrder, double maxPctVol, std::string riskAversion, std::string startTime, std::string endTime,
 		bool forceCompletion, bool allowPastTime, double monetaryValue);
 	void FillVwapParams(Order& baseOrder, double maxPctVol, std::string startTime, std::string endTime,
@@ -48,13 +48,14 @@ public:
 	int queryBuyingPower();
 	std::string queryPriExch(std::string ticker);
 	std::vector<int> sendLmtOrder(std::vector<STOCK_ORD> lmtOrder);
+	std::vector<int> sendLOOOrder(std::vector<STOCK_ORD> looOrder);	//limit on open
 	std::vector<int> sendAPOrder(std::vector<STOCK_ORD> APOrder, double maxPctVol, std::string riskAversion, std::string startTime, std::string endTime,
 		bool forceCompletion, bool allowPastTime, double monetaryValue);
 	std::vector<int> sendVWAPOrder(std::vector<STOCK_ORD> VWAPOrder, double maxPctVol, std::string startTime, std::string endTime, bool allowPastEndTime, 
 		bool noTakeLiq, bool speedUp, double monetaryValue);
 	std::vector<int> modifyLmtOrder(std::map<int, MODIFY_ORD> updateOrder);
 	double queryMinTick(std::string ticker);
-
+	std::vector<int> sendAucOrder(std::vector<STOCK_ORD> AucOrder);
 
 	/**********************************************************************************************************/
 	/*advanced trade functions*/

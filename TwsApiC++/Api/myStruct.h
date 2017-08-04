@@ -69,8 +69,10 @@ struct N_QUOTE_STATUS {
 struct CSV_READ {
 	std::string ticker;
 	double score;
+	int day2er;
 	double price;
 	int dmv;
 	double nnlsSPX;
 	double nnlsRUT;
+	double lmtPrice;
 };

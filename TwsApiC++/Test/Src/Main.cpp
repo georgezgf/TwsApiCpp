@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
 
 	TEST(0, testAPI.EC->eDisconnect());	// only for test purposes
 
-	if (TEST(0, testAPI.EC->eConnect("", port, 100)))
+	if (TEST(0, testAPI.EC->eConnect("", port, 50)))
 	{
 		PrintProcessId, printf("ServerVersion = %d\n", testAPI.EC->serverVersion());
 
@@ -89,63 +89,7 @@ int main(int argc, char *argv[])
 		std::vector<POS> allPos;
 		std::map<int, COMB_OPENORD> combOrd;
 
-		//std::vector<std::string> tickerList{ "SPY","IWM" };
-
 		
-		//quoteMap = testAPI.queryQuote(tickerList);
-		/*
-		quoteMap = testAPI.queryClose(tickerList);
-
-		for (int i = 0; i < tickerList.size(); i++) {
-			std::cout << "Ticker: " << tickerList[i] << ". Ask: " << quoteMap[tickerList[i]].askPrice[0]
-				<< ". Bid: " << quoteMap[tickerList[i]].bidPrice[0] << ". Ask size: " << quoteMap[tickerList[i]].askSize[0]
-				<< ". Bid size: " << quoteMap[tickerList[i]].bidSize[0] << ". close price: " << quoteMap[tickerList[i]].close[0] << std::endl;
-		}
-		*/
-		//int orderID = testAPI.queryNextOrderId();
-
-		//Order baseOrder = OrderSamples::LimitOrder("BUY", 100, 1010);
-		//Order baseOrder = OrderSamples::MarketOrder("BUY", 100);
-		//testAPI.FillArrivalPriceParams(baseOrder, 0.1, "Passive", "09:53:00 PST", "10:00:00 PST", true, false, 100000);
-		//testAPI.EC->placeOrder(orderID++, ContractSamples::USStock("AMZN"), baseOrder);
-
-		//testAPI.closeAllAP(0.1, "Passive", "12:58:00 PST", "13:00:00 PST", true, false, 100000);
-
-		/*
-		std::vector<STOCK_ORD> testOrder = { {"TGI",1.8,100},{"PLCE",1.5,-200} };
-		
-		std::vector<int> orderIdList = testAPI.sendLmtOrder(testOrder);
-		
-		for (int i = 0; i < orderIdList.size(); i++) {
-			std::cout << "orderId = " << orderIdList[i] << std::endl;
-		}
-		
-		*/
-
-		/*
-		stockPos = testAPI.queryPos();
-
-		std::cout << "Position size =" << stockPos.size() << std::endl;
-
-		for (int i = 0; i < stockPos.size(); i++) {
-			std::cout << "Ticker: " << stockPos[i].ticker << ". Position: " << stockPos[i].posQty << ". Avg cost: " << stockPos[i].avgCost << std::endl;
-		}
-		*/
-
-		//testAPI.updateOrder({ 165,166 },2,5);
-		//std::cout << testAPI.queryMinTick("TGI") << std::endl;
-
-		//testAPI.EC->reqContractDetails(9002, ContractSamples::USStock("PLCE"));
-
-		/*
-		for (int i = 0; i < tickerList.size(); i++) {
-			double minTick = testAPI.queryMinTick(tickerList[i]);
-			std::cout << "ticker: " << tickerList[i] << ". min Tick = " << minTick << std::endl;
-		}
-		*/
-		//std::cout << testAPI.roundNum(147.65222, 0.01) << std::endl;
-		//std::cout << 148 % 5 << "  " << 148/5<<std::endl;
-
 #ifdef READCSV
 	
 		std::string csvFile = "D:\\Dropbox\\Public\\Finance\\syncFile\\UEI001\\erst.UEI001." + buffers + ".csv";
@@ -160,21 +104,26 @@ int main(int argc, char *argv[])
 		}
 
 		for (int i = 0; i < CSVRead.size(); i++) {
-			std::cout << "Ticker: " << CSVRead[i].ticker << " Score = " << CSVRead[i].score << ". Price: " << CSVRead[i].price << ". DMV: " << CSVRead[i].dmv << "\n";
+			std::cout << "Ticker: " << CSVRead[i].ticker << " Score = " << CSVRead[i].score << ". limit Price: " << CSVRead[i].lmtPrice << ". DMV: " << CSVRead[i].dmv << "\n";
 		}
-
+		
 		double bp = testAPI.queryBuyingPower();
 		std::cout << "Buying power = " << bp << std::endl;
-
+		
 		std::vector<STOCK_ORD> gOrder = testAPI.genOrder(CSVRead, multiplier,bp);
 
 		if (gOrder.size() == 0) {
 			std::cout << "There is no stock to trade today. Stop program" << std::endl;
 			return 1;
 		}
-
+		
 		for (int i = 0; i < gOrder.size(); i++) {
-			std::cout << "Ticker: " << gOrder[i].ticker << ". Primary exchange: " << gOrder[i].primaryExch << ". Price: " << gOrder[i].orderPrice << ". share: " << gOrder[i].orderQty << "\n";
+			double minTick = testAPI.queryMinTick(gOrder[i].ticker);
+
+			std::cout << "Ticker: " << gOrder[i].ticker << ". Primary exchange: " << gOrder[i].primaryExch << ". Price: " << gOrder[i].orderPrice 
+				<< ". share: " << gOrder[i].orderQty << ". minTick = " << minTick <<". Trunc limit price: " << testAPI.roundNum(gOrder[i].orderQty,gOrder[i].orderPrice,minTick)<<"\n";
+
+			gOrder[i].orderPrice = testAPI.roundNum(gOrder[i].orderQty, gOrder[i].orderPrice, minTick);
 		}
 		
 		std::vector<double> exposure = testAPI.orderHedgeCal(gOrder);
@@ -186,8 +135,15 @@ int main(int argc, char *argv[])
 		totalOrder.reserve(gOrder.size() + hedgeOrder.size());
 		totalOrder.insert(totalOrder.end(), gOrder.begin(), gOrder.end());
 		totalOrder.insert(totalOrder.end(), hedgeOrder.begin(), hedgeOrder.end());
-
+		
 	
+
+		/*
+		for (int i = 0; i < 100; i++) {
+			testAPI.monitorExp(gOrder);
+			Sleep(1000 * 60);
+		}
+		*/
 #endif
 		/*
 		std::cout << "Continue program? (y/n)";
@@ -208,12 +164,21 @@ int main(int argc, char *argv[])
 		//std::vector<int> hedgeOrderList = testAPI.openMktAP(hedgeOrder, 0.05, "Passive", openStartTime, openEndTime, false, true, 100000);
 		//testAPI.EC->reqGlobalCancel();
 		
-		std::vector<int> openOrderList = testAPI.openMktVWAP(gOrder, 0.05, openStartTime, openEndTime, false, false, false, 100000);
+		
+
+		if (port == 7500) {	//use limit on open order for lydzz account
+			std::vector<int> openOrderList = testAPI.sendLOOOrder(gOrder);
+		}
+		else {	//all the other accounts use VWAP
+			std::vector<int> openOrderList = testAPI.openMktVWAP(gOrder, 0.05, openStartTime, openEndTime, false, false, false, 100000);
+		}
+		
+
 		//std::vector<int> hedgeOrderList = testAPI.openMktVWAP(hedgeOrder, 0.05, closeStartTime, closeEndTime, false, false, true, 100000);
 		
 		Sleep(3000 * 60);
 
-		//Every 1 min, read open orders, total 15mins
+		//Every 1 min, read open orders, total 40 mins
 		for (int i = 0; i < 40; i++) {
 			
 			combOrd = testAPI.queryOrd();
@@ -225,10 +190,10 @@ int main(int argc, char *argv[])
 //					<< ". Remaining: " << (it->second).ordStatus.remaining << ". ClientId: " << (it->second).ordStatus.clientId << "\n";
 //			}
 
-			testAPI.monitorExp(gOrder);
+//			testAPI.monitorExp(gOrder);
 
 			if (combOrd.size() == 0) {
-				allPos = testAPI.queryPos();
+				allPos = testAPI.queryPos(); 
 
 				std::cout << "Position size =" << allPos.size() << std::endl;
 
@@ -254,7 +219,7 @@ int main(int argc, char *argv[])
 
 		//Sleep(5000);
 
-		testAPI.closePartVWAP(gOrder, 0.05, closeStartTime, closeEndTime, true, false, false, 100000);
+		testAPI.closePartVWAP(totalOrder, 0.05, closeStartTime, closeEndTime, true, false, false, 100000);
 		//testAPI.closePartAP(gOrder, 0.05, "Passive", closeStartTime, closeEndTime, true, false, 100000);
 		//testAPI.closeAllStockAP( 0.05, "Passive", closeStartTime, closeEndTime, true, false, 100000);
 		
@@ -264,6 +229,8 @@ int main(int argc, char *argv[])
 		double cash = testAPI.queryCash();
 		std::cout << "Cash = " << cash << std::endl;
 		
+//		std::cout << testAPI.roundNum(26.73, 0.0001) << std::endl;
+
 //		double bp = testAPI.queryBuyingPower();
 //		std::cout << "Buying power = " << bp << std::endl;
 
