@@ -41,6 +41,7 @@ struct STOCK_ORD {
 	std::string primaryExch;
 	double nnlsSPX;
 	double nnlsRUT;
+	int dmv;
 };
 
 struct MODIFY_ORD {

@@ -12,7 +12,7 @@ using namespace TwsApi;
 #define PrintProcessId printf("%ld  ", CurrentThreadId() )
 
 #define READCSV		//uncomment this to read CSV files
-#define SUBMITORDER	//uncomment this to submit open and close orders
+//#define SUBMITORDER	//uncomment this to submit open and close orders
 //#define TESTFUN		//uncomment this to test functions
 
 int main(int argc, char *argv[])
@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
 #ifdef READCSV
 	
 		std::string csvFile = "D:\\Dropbox\\Public\\Finance\\syncFile\\UEI001\\erst.UEI001." + buffers + ".csv";
-		//std::string csvFile = "D:\\Dropbox\\Public\\Finance\\syncFile\\UEI001\\erst.UEI001.2017-07-28.csv";
+		//std::string csvFile = "D:\\Dropbox\\Public\\Finance\\syncFile\\UEI001\\erst.UEI001.2017-08-08.csv";
 
 
 		std::vector<CSV_READ> CSVRead = testAPI.getCSV(csvFile);
@@ -110,32 +110,57 @@ int main(int argc, char *argv[])
 		double bp = testAPI.queryBuyingPower();
 		std::cout << "Buying power = " << bp << std::endl;
 		
-		std::vector<STOCK_ORD> gOrder = testAPI.genOrder(CSVRead, multiplier,bp);
+		std::vector<STOCK_ORD> lyOrder = testAPI.genOrder(CSVRead, 1.5,0.0002,2317295); //maxPercentage = 0.02% for ly (LOO orders)
+		std::vector<STOCK_ORD> ltOrder = testAPI.genOrder(CSVRead, 2, 0.002, 6000000);	//maxPercentage = 0.2% for lt (for both LOO and VWAP orders)
+		
+		
 
-		if (gOrder.size() == 0) {
+		if (lyOrder.size() == 0) {
 			std::cout << "There is no stock to trade today. Stop program" << std::endl;
 			return 1;
 		}
 		
-		for (int i = 0; i < gOrder.size(); i++) {
-			double minTick = testAPI.queryMinTick(gOrder[i].ticker);
-
-			std::cout << "Ticker: " << gOrder[i].ticker << ". Primary exchange: " << gOrder[i].primaryExch << ". Price: " << gOrder[i].orderPrice 
-				<< ". share: " << gOrder[i].orderQty << ". minTick = " << minTick <<". Trunc limit price: " << testAPI.roundNum(gOrder[i].orderQty,gOrder[i].orderPrice,minTick)<<"\n";
-
-			gOrder[i].orderPrice = testAPI.roundNum(gOrder[i].orderQty, gOrder[i].orderPrice, minTick);
+		if (port == 7500) {
+			lyOrder = testAPI.truncLmtPrice(lyOrder);//truncate the price by minTick (because use LOO for open orders, need to fill limit price)
 		}
-		
-		std::vector<double> exposure = testAPI.orderHedgeCal(gOrder);
+	
+		if (port == 7498) {
+			ltOrder = testAPI.truncLmtPrice(ltOrder);
+		}
+
+		if (port == 7500) {	//ly
+			//std::cout << "Order submission size: " << lyOrder.size() << std::endl;
+
+			std::cout << "lyOrder size:" << lyOrder.size() << "\n";
+			for (int i = 0; i < lyOrder.size(); i++) {
+
+				std::cout << "Ticker: " << lyOrder[i].ticker << ". Primary exchange: " << lyOrder[i].primaryExch
+					<< ". share: " << lyOrder[i].orderQty << ". Trunc limit price: " << lyOrder[i].orderPrice << "\n";
+
+				//gOrder[i].orderPrice = testAPI.roundNum(gOrder[i].orderQty, gOrder[i].orderPrice, minTick);
+			}
+		}
+		if (port == 7498) {	//lt
+			std::cout << "ltOrder size:" << ltOrder.size() << "\n";
+			for (int i = 0; i < ltOrder.size(); i++) {
+
+				std::cout << "Ticker: " << ltOrder[i].ticker << ". Primary exchange: " << ltOrder[i].primaryExch
+					<< ". share: " << ltOrder[i].orderQty << ". Trunc limit price: " << ltOrder[i].orderPrice << "\n";
+
+				//gOrder[i].orderPrice = testAPI.roundNum(gOrder[i].orderQty, gOrder[i].orderPrice, minTick);
+			}
+		}
+		/*
+		std::vector<double> exposure = testAPI.orderHedgeCal(lyOrder);
 		
 		std::vector<STOCK_ORD> hedgeOrder = testAPI.genHedgeOrder(exposure[0], exposure[1]);
 
 		//combine stock orders and hedge orders
 		std::vector<STOCK_ORD> totalOrder;
-		totalOrder.reserve(gOrder.size() + hedgeOrder.size());
-		totalOrder.insert(totalOrder.end(), gOrder.begin(), gOrder.end());
+		totalOrder.reserve(ltOrder.size() + hedgeOrder.size());
+		totalOrder.insert(totalOrder.end(), ltOrder.begin(), lyOrder.end());
 		totalOrder.insert(totalOrder.end(), hedgeOrder.begin(), hedgeOrder.end());
-		
+		*/
 	
 
 		/*
@@ -166,21 +191,23 @@ int main(int argc, char *argv[])
 		
 		
 
-		if (port == 7500) {	//use limit on open order for lydzz account
-			std::vector<int> openOrderList = testAPI.sendLOOOrder(gOrder);
+		if (port == 7500) {	//use limit on open order for ly
+			std::vector<int> openOrderList = testAPI.sendLOOOrder(lyOrder);
 		}
-		else {	//all the other accounts use VWAP
-			std::vector<int> openOrderList = testAPI.openMktVWAP(gOrder, 0.05, openStartTime, openEndTime, false, false, false, 100000);
+		if (port==7498) {	//all the other accounts use VWAP
+			testAPI.splitLOOVWAPOrders(lyOrder, ltOrder, 0.05, openStartTime, openEndTime, false, false, false, 100000);
+
+		//	std::vector<int> openOrderList = testAPI.openMktVWAP(gOrder, 0.05, openStartTime, openEndTime, false, false, false, 100000);
 		}
 		
 
 		//std::vector<int> hedgeOrderList = testAPI.openMktVWAP(hedgeOrder, 0.05, closeStartTime, closeEndTime, false, false, true, 100000);
 		
-		Sleep(3000 * 60);
+		Sleep(1000 * 60 * 7);
 
 		//Every 1 min, read open orders, total 40 mins
 		for (int i = 0; i < 40; i++) {
-			
+
 			combOrd = testAPI.queryOrd();
 
 			std::cout << "Open order size =" << combOrd.size() << std::endl;
@@ -218,8 +245,14 @@ int main(int argc, char *argv[])
 		//testAPI.EC->reqGlobalCancel();
 
 		//Sleep(5000);
+		if (port == 7500) {
+			testAPI.closePartVWAP(lyOrder, 0.05, closeStartTime, closeEndTime, true, false, false, 100000);
+		}
 
-		testAPI.closePartVWAP(totalOrder, 0.05, closeStartTime, closeEndTime, true, false, false, 100000);
+		if (port == 7498) {
+			testAPI.closePartVWAP(ltOrder, 0.05, closeStartTime, closeEndTime, true, false, false, 100000);
+		}
+		
 		//testAPI.closePartAP(gOrder, 0.05, "Passive", closeStartTime, closeEndTime, true, false, 100000);
 		//testAPI.closeAllStockAP( 0.05, "Passive", closeStartTime, closeEndTime, true, false, 100000);
 		

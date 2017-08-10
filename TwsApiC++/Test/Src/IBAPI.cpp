@@ -107,6 +107,18 @@ double IBAPI::roundNum(int share, double num, double minTick) {
 	
 }
 
+std::vector<STOCK_ORD> IBAPI::truncLmtPrice(std::vector<STOCK_ORD>stockOrder) {
+	printInfo("Truncate limit price.  ");
+
+	for (int i = 0; i < stockOrder.size(); i++) {
+		double minTick = queryMinTick(stockOrder[i].ticker);
+		stockOrder[i].orderPrice = roundNum(stockOrder[i].orderQty, stockOrder[i].orderPrice, minTick);
+		std::cout << "Mintick = " << minTick << ". orderPrice ="<< stockOrder[i].orderPrice << ".\n";
+	}
+	return stockOrder;
+}
+
+
 void IBAPI::FillArrivalPriceParams(Order& baseOrder, double maxPctVol, std::string riskAversion, std::string startTime, std::string endTime,
 	bool forceCompletion, bool allowPastTime, double monetaryValue) {
 	baseOrder.algoStrategy = "ArrivalPx";
@@ -147,7 +159,7 @@ void IBAPI::FillVwapParams(Order& baseOrder, double maxPctVol, std::string start
 	baseOrder.algoParams->push_back(tag7);
 }
 
-std::vector<STOCK_ORD> IBAPI::genOrder(std::vector<CSV_READ> csvRead, double multiplier, double buyingPower) {
+std::vector<STOCK_ORD> IBAPI::genOrder(std::vector<CSV_READ> csvRead, double multiplier, double maxPer, double buyingPower) {
 	printInfo("Generate orders from CSV reading. ");
 
 	std::vector<STOCK_ORD> stockOrder;
@@ -200,26 +212,26 @@ std::vector<STOCK_ORD> IBAPI::genOrder(std::vector<CSV_READ> csvRead, double mul
 									//std::cout << std::regex_replace(tmpticker, r1, "") << std::endl;
 		std::string ticker = std::regex_replace(csvRead[i].ticker, r1, "");
 
-		if (abs(csvRead[i].score) >= 40 && abs(csvRead[i].score) < 45) {
-			double tmp = std::min(multiplier*10000 / csvRead[i].price, 0.002*csvRead[i].dmv);
+		if (abs(csvRead[i].score) >= 35 && abs(csvRead[i].score) < 45) {
+			double tmp = std::min(multiplier*10000 / csvRead[i].price, maxPer*csvRead[i].dmv);
 			int tmpshare = int(trunc(tmp / 100) * 100);	//down round share to 100
 			share = csvRead[i].score > 0 ? tmpshare : -tmpshare;
 			//std::cout << tmp << ". tmpshare = " << tmpshare << ". share = " << share <<std::endl;
 		}
 		else if(abs(csvRead[i].score) >= 45 && abs(csvRead[i].score) < 60){
-			double tmp = std::min(multiplier * 10000 / csvRead[i].price, 0.002*csvRead[i].dmv);
+			double tmp = std::min(multiplier * 10000 / csvRead[i].price, maxPer*csvRead[i].dmv);
 			int tmpshare = int(trunc(tmp / 100) * 100);	//down round share to 100
 			share = csvRead[i].score > 0 ? tmpshare : -tmpshare;
 			//std::cout << tmp << ". tmpshare = " << tmpshare << ". share = " << share << std::endl;
 		}
 		else if(abs(csvRead[i].score) >= 60) {
-			double tmp = std::min(multiplier * 10000 / csvRead[i].price, 0.002*csvRead[i].dmv);
+			double tmp = std::min(multiplier * 10000 / csvRead[i].price, maxPer*csvRead[i].dmv);
 			int tmpshare = int(trunc(tmp / 100) * 100);	//down round share to 100
 			share = csvRead[i].score > 0 ? tmpshare : -tmpshare;
 			//std::cout << tmp << ". tmpshare = " << tmpshare << ". share = " << share << std::endl;
 		}
 		if (share != 0 && csvRead[i].price>=3) {
-			stockOrder.push_back({ ticker, csvRead[i].lmtPrice, share, primaryExch,csvRead[i].nnlsSPX,csvRead[i].nnlsRUT });
+			stockOrder.push_back({ ticker, csvRead[i].lmtPrice, share, primaryExch,csvRead[i].nnlsSPX,csvRead[i].nnlsRUT,csvRead[i].dmv });
 			tradeValue += csvRead[i].price*abs(share);
 		}
 		
@@ -1152,6 +1164,8 @@ void IBAPI::closePartVWAP(std::vector<STOCK_ORD> orderList, double maxPctVol, st
 
 	std::vector<std::string> orderTicker;
 	std::vector<STOCK_ORD> closeOrd;
+	std::map<std::string, STOCK_ORD> orderMap;
+	std::vector<std::string>::iterator it;
 	bool zeroPos = true;	// make sure there is position to close.
 
 	std::vector<POS> Position = queryPos();
@@ -1163,12 +1177,15 @@ void IBAPI::closePartVWAP(std::vector<STOCK_ORD> orderList, double maxPctVol, st
 
 	for (int i = 0; i < orderList.size(); i++) {
 		orderTicker.push_back(orderList[i].ticker);
+		orderMap[orderList[i].ticker] = orderList[i];
 	}
 
 	//Exctract positions that are in the order ticker lists to generate close orders
 	for (int i = 0; i < Position.size(); i++) {
-		if (Position[i].posQty != 0 && std::find(orderTicker.begin(), orderTicker.end(), Position[i].ticker) != orderTicker.end()) {
-			std::string primaryExchange = queryPriExch(Position[i].ticker);
+		it = std::find(orderTicker.begin(), orderTicker.end(), Position[i].ticker);
+		if (Position[i].posQty != 0 && it != orderTicker.end()) {
+			std::string primaryExchange = orderMap[*it].primaryExch;
+			
 			// posQty>0: buy position. Need to sell at ask price to close; 
 			// posQty<0: sell position. Need to buy at bid price to close.
 			STOCK_ORD tmpOrd = { Position[i].ticker, -1, -Position[i].posQty, primaryExchange };	//set price to -1 due to market order
@@ -1215,4 +1232,62 @@ std::vector<int> IBAPI::openMktVWAP(std::vector<STOCK_ORD> stockOrd, double maxP
 	printInfo("Sending VWAP orders. ");
 
 	return sendVWAPOrder(stockOrd, maxPctVol, startTime, endTime, allowPastEndTime, noTakeLiq, speedUp, monetaryValue);
+}
+
+void IBAPI::splitLOOVWAPOrders(std::vector<STOCK_ORD>lyStock, std::vector<STOCK_ORD>ltStock, double maxPctVol, std::string startTime, std::string endTime, bool allowPastEndTime,
+	bool noTakeLiq, bool speedUp, double monetaryValue) {
+	printInfo("Split LOO VWAP orders. ");
+
+	int absrql;	//abs remaining qty for LOO
+	int rql;
+	double tmpabsrql;
+	std::vector<STOCK_ORD> ltLOOOrder;
+	std::vector<STOCK_ORD> ltVWAPOrder=ltStock;
+	
+	
+	std::map<std::string, int> rqlMap;
+	
+
+	for (int i = 0; i < lyStock.size(); i++) {
+		tmpabsrql = 0.0002*lyStock[i].dmv - abs(lyStock[i].orderQty) > 100 ? 0.0002*lyStock[i].dmv - abs(lyStock[i].orderQty) : 0;
+
+		if (tmpabsrql > 0) {
+			absrql = int(round(tmpabsrql/100)*100);
+
+			int sign = lyStock[i].orderQty > 0 ? 1 : -1;
+			rql = sign * absrql;
+
+			rqlMap[lyStock[i].ticker] = rql;
+
+			std::cout << "ticker: " << lyStock[i].ticker << ". orderQty for LOO: " << lyStock[i].orderQty << ". 0.02% dmv: " << 0.0002*lyStock[i].dmv 
+				<< ". Remaining qty for LOO: " <<  rql << "\n";
+		}
+	}
+
+	for (int i = 0; i < ltStock.size(); i++) {
+		std::map<std::string, int>::iterator it = rqlMap.find(ltStock[i].ticker);
+
+		if (it != rqlMap.end()) {
+			int ltLOOqtr = abs(rqlMap[ltStock[i].ticker]) > abs(ltStock[i].orderQty) ? ltStock[i].orderQty : rqlMap[ltStock[i].ticker];
+		
+			ltLOOOrder.push_back({ ltStock[i].ticker,ltStock[i].orderPrice,ltLOOqtr,ltStock[i].primaryExch });
+
+			int ltVWAPqty = abs(rqlMap[ltStock[i].ticker]) > abs(ltStock[i].orderQty) ? 0 : ltStock[i].orderQty-ltLOOqtr;
+			
+			std::cout << "ticker:" << ltStock[i].ticker << ". LOO qty = " << ltLOOqtr << ". VWAP qty = " << ltVWAPqty << "\n";
+			
+			ltVWAPOrder[i].orderQty = ltVWAPqty;
+			
+			//
+			//std::cout << "ticker:" << ltVWAPOrder[i].ticker << ". VWAP qty = " << ltVWAPOrder[i].orderQty << "\n";
+		}
+	}
+	//std::cout << "ltVWAPOrder size = " << ltVWAPOrder.size() << std::endl;
+//	for (int i = 0; i < ltVWAPOrder.size(); i++) {
+//		std::cout << "ticker: " << ltVWAPOrder[i].ticker << ". order qty: " << ltVWAPOrder[i].orderQty<<  "\n";
+//	}
+
+	sendLOOOrder(ltLOOOrder);	//send LOO orders for lt
+	openMktVWAP(ltVWAPOrder, 0.05, startTime, endTime, false, false, false, 100000); //send VWAP orders for lt
+
 }
