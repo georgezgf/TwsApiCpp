@@ -214,19 +214,19 @@ std::vector<STOCK_ORD> IBAPI::genOrder(std::vector<CSV_READ> csvRead, double mul
 
 		if (abs(csvRead[i].score) >= 35 && abs(csvRead[i].score) < 45) {
 			double tmp = std::min(multiplier*10000 / csvRead[i].price, maxPer*csvRead[i].dmv);
-			int tmpshare = int(trunc(tmp / 100) * 100);	//down round share to 100
+			int tmpshare = int(trunc(tmp / 10) * 10);	//down round share to 10
 			share = csvRead[i].score > 0 ? tmpshare : -tmpshare;
 			//std::cout << tmp << ". tmpshare = " << tmpshare << ". share = " << share <<std::endl;
 		}
 		else if(abs(csvRead[i].score) >= 45 && abs(csvRead[i].score) < 60){
 			double tmp = std::min(multiplier * 10000 / csvRead[i].price, maxPer*csvRead[i].dmv);
-			int tmpshare = int(trunc(tmp / 100) * 100);	//down round share to 100
+			int tmpshare = int(trunc(tmp / 10) * 10);	//down round share to 10
 			share = csvRead[i].score > 0 ? tmpshare : -tmpshare;
 			//std::cout << tmp << ". tmpshare = " << tmpshare << ". share = " << share << std::endl;
 		}
 		else if(abs(csvRead[i].score) >= 60) {
 			double tmp = std::min(multiplier * 10000 / csvRead[i].price, maxPer*csvRead[i].dmv);
-			int tmpshare = int(trunc(tmp / 100) * 100);	//down round share to 100
+			int tmpshare = int(trunc(tmp / 10) * 10);	//down round share to 10
 			share = csvRead[i].score > 0 ? tmpshare : -tmpshare;
 			//std::cout << tmp << ". tmpshare = " << tmpshare << ". share = " << share << std::endl;
 		}
@@ -622,13 +622,15 @@ int IBAPI::queryBuyingPower() {
 	return EW.buyingPower;
 }
 
-void IBAPI::monitorExp(std::vector<STOCK_ORD> orderList) {
+std::vector<double> IBAPI::monitorExp(std::vector<STOCK_ORD> orderList) {
 	printInfo("Monitor index exposure");
 
 	std::vector<std::string> orderTicker;
 	std::vector<std::string>::iterator it;
 	std::map<std::string, STOCK_ORD> orderMap;
 	bool zeroPos = true;
+	std::vector<double> exposure;
+	exposure = { 0,0 };
 
 	double SPXexp = 0;
 	double RUTexp = 0;
@@ -638,7 +640,7 @@ void IBAPI::monitorExp(std::vector<STOCK_ORD> orderList) {
 
 	if (Position.size() == 0) {
 		std::cout << "No position hold." << std::endl;
-		return;
+		return exposure;
 	}
 
 	for (int i = 0; i < orderList.size(); i++) {
@@ -664,10 +666,18 @@ void IBAPI::monitorExp(std::vector<STOCK_ORD> orderList) {
 
 	if (zeroPos == true) {
 		std::cout << "No position to calculate exposure." << zeroPos << std::endl;
-		return;
+		return exposure;
 	}
 
 	std::cout << "SPX exposure:" << SPXexp << ". RUT exposure: " << RUTexp << std::endl;
+	
+	exposure[0] = SPXexp;
+	exposure[1] = RUTexp;
+
+	//exposure.push_back(SPXexp);
+	//exposure.push_back(RUTexp);
+
+	return exposure;
 }
 
 
@@ -772,6 +782,22 @@ std::vector<int> IBAPI::sendAucOrder(std::vector<STOCK_ORD> aucOrder) {
 
 	return orderIdList;
 }
+
+void IBAPI::sendFutureMktOrder(std::string localSymbol, std::string exchange, int orderQty) {
+	printInfo("Send future order. ");
+	EW.combOpenOrd.clear();
+	EW.b_openOrdReady = false;
+
+	std::string action;
+	int count = 0;
+	int orderId = queryNextOrderId();
+
+	action = orderQty > 0 ? "BUY" : "SELL";
+	EC->placeOrder(EW.m_orderId++, ContractSamples::FutureWithLocalSymbol(localSymbol,exchange), OrderSamples::MarketOrder(action, abs(orderQty)));	
+
+	std::cout << "Send future order finish. " << std::endl;
+}
+
 
 std::vector<int> IBAPI::sendAPOrder(std::vector<STOCK_ORD> APOrder, double maxPctVol, std::string riskAversion, std::string startTime, std::string endTime,
 	bool forceCompletion, bool allowPastTime, double monetaryValue) {
@@ -1234,7 +1260,7 @@ std::vector<int> IBAPI::openMktVWAP(std::vector<STOCK_ORD> stockOrd, double maxP
 	return sendVWAPOrder(stockOrd, maxPctVol, startTime, endTime, allowPastEndTime, noTakeLiq, speedUp, monetaryValue);
 }
 
-void IBAPI::splitLOOVWAPOrders(std::vector<STOCK_ORD>lyStock, std::vector<STOCK_ORD>ltStock, double maxPctVol, std::string startTime, std::string endTime, bool allowPastEndTime,
+void IBAPI::splitLOOVWAPOrders(std::vector<STOCK_ORD>lyStock, std::vector<STOCK_ORD>ltStock, double LOOPer, double maxPctVol, std::string startTime, std::string endTime, bool allowPastEndTime,
 	bool noTakeLiq, bool speedUp, double monetaryValue) {
 	printInfo("Split LOO VWAP orders. ");
 
@@ -1249,7 +1275,7 @@ void IBAPI::splitLOOVWAPOrders(std::vector<STOCK_ORD>lyStock, std::vector<STOCK_
 	
 
 	for (int i = 0; i < lyStock.size(); i++) {
-		tmpabsrql = 0.0002*lyStock[i].dmv - abs(lyStock[i].orderQty) > 100 ? 0.0002*lyStock[i].dmv - abs(lyStock[i].orderQty) : 0;
+		tmpabsrql = LOOPer*lyStock[i].dmv - abs(lyStock[i].orderQty) > 100 ? LOOPer*lyStock[i].dmv - abs(lyStock[i].orderQty) : 0;
 
 		if (tmpabsrql > 0) {
 			absrql = int(round(tmpabsrql/100)*100);
@@ -1259,7 +1285,7 @@ void IBAPI::splitLOOVWAPOrders(std::vector<STOCK_ORD>lyStock, std::vector<STOCK_
 
 			rqlMap[lyStock[i].ticker] = rql;
 
-			std::cout << "ticker: " << lyStock[i].ticker << ". orderQty for LOO: " << lyStock[i].orderQty << ". 0.02% dmv: " << 0.0002*lyStock[i].dmv 
+			std::cout << "ticker: " << lyStock[i].ticker << ". orderQty for LOO: " << lyStock[i].orderQty << ". 0.05% dmv: " << LOOPer*lyStock[i].dmv
 				<< ". Remaining qty for LOO: " <<  rql << "\n";
 		}
 	}

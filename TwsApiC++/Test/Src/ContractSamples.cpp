@@ -272,6 +272,18 @@ Contract ContractSamples::SimpleFuture(){
 	return contract;
 }
 
+Contract ContractSamples::SimpleFuture(std::string symbol,std::string expiryDate) {
+	//! [futcontract]
+	Contract contract;
+	contract.symbol = symbol;
+	contract.secType = "FUT";
+	contract.exchange = "GLOBEX";
+	contract.currency = "USD";
+	contract.exchange = expiryDate;
+	//! [futcontract]
+	return contract;
+}
+
 	/*
      * Rather than giving expiration dates we can also provide the local symbol
      * attributes such as symbol, currency, strike, etc. 
@@ -282,7 +294,18 @@ Contract ContractSamples::FutureWithLocalSymbol(){
 	contract.secType = "FUT";
 	contract.exchange = "GLOBEX";
 	contract.currency = "USD";
-	contract.localSymbol = "ESZ6";
+	contract.localSymbol = "ESZ7";
+	//! [futcontract_local_symbol]
+	return contract;
+}
+
+Contract ContractSamples::FutureWithLocalSymbol(std::string localSymbol,std::string exchange) {
+	//! [futcontract_local_symbol]
+	Contract contract;
+	contract.secType = "FUT";
+	contract.exchange = exchange;
+	contract.currency = "USD";
+	contract.localSymbol = localSymbol;
 	//! [futcontract_local_symbol]
 	return contract;
 }

@@ -12,7 +12,7 @@ using namespace TwsApi;
 #define PrintProcessId printf("%ld  ", CurrentThreadId() )
 
 #define READCSV		//uncomment this to read CSV files
-//#define SUBMITORDER	//uncomment this to submit open and close orders
+#define SUBMITORDER	//uncomment this to submit open and close orders
 //#define TESTFUN		//uncomment this to test functions
 
 int main(int argc, char *argv[])
@@ -110,15 +110,9 @@ int main(int argc, char *argv[])
 		double bp = testAPI.queryBuyingPower();
 		std::cout << "Buying power = " << bp << std::endl;
 		
-		std::vector<STOCK_ORD> lyOrder = testAPI.genOrder(CSVRead, 1.5,0.0002,2317295); //maxPercentage = 0.02% for ly (LOO orders)
+		std::vector<STOCK_ORD> lyOrder = testAPI.genOrder(CSVRead, 1.5,0.0005,2100000); //maxPercentage = 0.05% for ly (LOO orders)
 		std::vector<STOCK_ORD> ltOrder = testAPI.genOrder(CSVRead, 2, 0.002, 6000000);	//maxPercentage = 0.2% for lt (for both LOO and VWAP orders)
 		
-		
-
-		if (lyOrder.size() == 0) {
-			std::cout << "There is no stock to trade today. Stop program" << std::endl;
-			return 1;
-		}
 		
 		if (port == 7500) {
 			lyOrder = testAPI.truncLmtPrice(lyOrder);//truncate the price by minTick (because use LOO for open orders, need to fill limit price)
@@ -130,6 +124,12 @@ int main(int argc, char *argv[])
 
 		if (port == 7500) {	//ly
 			//std::cout << "Order submission size: " << lyOrder.size() << std::endl;
+			
+
+			if (lyOrder.size() == 0) {
+				std::cout << "There is no stock to trade today. Stop program" << std::endl;
+				return 1;
+			}
 
 			std::cout << "lyOrder size:" << lyOrder.size() << "\n";
 			for (int i = 0; i < lyOrder.size(); i++) {
@@ -141,6 +141,15 @@ int main(int argc, char *argv[])
 			}
 		}
 		if (port == 7498) {	//lt
+
+			
+			if (ltOrder.size() == 0) {
+				std::cout << "There is no stock to trade today. Stop program" << std::endl;
+				return 1;
+			}
+
+			ltOrder = testAPI.truncLmtPrice(ltOrder);
+
 			std::cout << "ltOrder size:" << ltOrder.size() << "\n";
 			for (int i = 0; i < ltOrder.size(); i++) {
 
@@ -195,7 +204,7 @@ int main(int argc, char *argv[])
 			std::vector<int> openOrderList = testAPI.sendLOOOrder(lyOrder);
 		}
 		if (port==7498) {	//all the other accounts use VWAP
-			testAPI.splitLOOVWAPOrders(lyOrder, ltOrder, 0.05, openStartTime, openEndTime, false, false, false, 100000);
+			testAPI.splitLOOVWAPOrders(lyOrder, ltOrder,0.0005, 0.05, openStartTime, openEndTime, false, false, false, 100000);
 
 		//	std::vector<int> openOrderList = testAPI.openMktVWAP(gOrder, 0.05, openStartTime, openEndTime, false, false, false, 100000);
 		}
@@ -224,10 +233,10 @@ int main(int argc, char *argv[])
 
 				std::cout << "Position size =" << allPos.size() << std::endl;
 
-				for (int i = 0; i < allPos.size(); i++) {
-					std::cout << "Ticker: " << allPos[i].ticker << ". Security type: " << allPos[i].secType << ". Position: " 
-						<< allPos[i].posQty << ". Avg cost: " << allPos[i].avgCost << "\n";
-				}
+//				for (int i = 0; i < allPos.size(); i++) {
+//					std::cout << "Ticker: " << allPos[i].ticker << ". Security type: " << allPos[i].secType << ". Position: " 
+//						<< allPos[i].posQty << ". Avg cost: " << allPos[i].avgCost << "\n";
+//				}
 
 				break;
 			}
@@ -262,6 +271,14 @@ int main(int argc, char *argv[])
 		double cash = testAPI.queryCash();
 		std::cout << "Cash = " << cash << std::endl;
 		
+		//testAPI.sendFutureMktOrder("ESZ7", "GLOBEX", -1);	//E-mini S&P 500
+		//testAPI.sendFutureMktOrder("TFZ7", "NYBOT", 1);	//Russel 2000 mini futures
+
+		std::vector<POS> futurePos = testAPI.queryPos();
+		for (int i = 0; i < futurePos.size(); i++) {
+			std::cout << futurePos[i].ticker << ": " << futurePos[i].secType << ", " << futurePos[i].posQty << ".\n";
+		}
+
 //		std::cout << testAPI.roundNum(26.73, 0.0001) << std::endl;
 
 //		double bp = testAPI.queryBuyingPower();

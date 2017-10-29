@@ -35,7 +35,7 @@ public:
 	std::vector<STOCK_ORD> genOrder(std::vector<CSV_READ> csvRead,double multiplier, double maxPer,double buyingPower);	//generate order for trade from csv reading data, multiplier is for different accounts
 	std::vector<double> orderHedgeCal(std::vector<STOCK_ORD> stockOrd);	//calculate the exposure of SPY and IWM. Need the generated stock order and csv file
 	std::vector<STOCK_ORD> genHedgeOrder(double SPXexp, double RUTexp);	//generate hedge orders according to the exposure
-	void monitorExp(std::vector<STOCK_ORD> orderList);
+	std::vector<double> monitorExp(std::vector<STOCK_ORD> orderList);
 
 	/**********************************************************************************************************/
 	/*basic trade functions*/
@@ -57,6 +57,7 @@ public:
 	std::vector<int> modifyLmtOrder(std::map<int, MODIFY_ORD> updateOrder);
 	double queryMinTick(std::string ticker);
 	std::vector<int> sendAucOrder(std::vector<STOCK_ORD> AucOrder);
+	void sendFutureMktOrder(std::string localSymbol, std::string expiryDate, int orderQty);	//local symbol of a specific future defined by IB in its description
 
 	/**********************************************************************************************************/
 	/*advanced trade functions*/
@@ -73,7 +74,7 @@ public:
 		bool forceCompletion, bool allowPastTime, double monetaryValue); //submit arrival price orders at open market time
 	std::vector<int> openMktVWAP(std::vector<STOCK_ORD> stockOrd, double maxPctVol, std::string startTime, std::string endTime,
 		bool allowPastEndTime, bool noTakeLiq, bool speedUp, double monetaryValue);
-	void splitLOOVWAPOrders(std::vector<STOCK_ORD>lyStock, std::vector<STOCK_ORD>ltStock, double maxPctVol, std::string startTime, std::string endTime, bool allowPastEndTime,
+	void splitLOOVWAPOrders(std::vector<STOCK_ORD>lyStock,  std::vector<STOCK_ORD>ltStock, double LooPar, double maxPctVol, std::string startTime, std::string endTime, bool allowPastEndTime,
 		bool noTakeLiq, bool speedUp, double monetaryValue);	//split lt account orders into LOO and VWAP open market orders. Parameters after the STOCK_ORD are for lt VWAP orders
 };
 
