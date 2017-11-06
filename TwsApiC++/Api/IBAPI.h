@@ -27,7 +27,7 @@ public:
 	void printInfo(std::string info);
 	std::vector<CSV_READ> getCSV(std::string str);
 	double roundNum(int share, double num, double minTick);	//round price according to  mintick. Up round for sell, down round for buy
-	std::vector<STOCK_ORD> truncLmtPrice(std::vector<STOCK_ORD>stockOrder);	//truncate the limit price in stock order vector by minTick. The limit price is read from the csv files
+	std::vector<STOCK_ORD> truncLmtPrice(std::vector<STOCK_ORD>stockOrder,bool printMinTick);	//truncate the limit price in stock order vector by minTick. The limit price is read from the csv files
 	void FillArrivalPriceParams(Order& baseOrder, double maxPctVol, std::string riskAversion, std::string startTime, std::string endTime,
 		bool forceCompletion, bool allowPastTime, double monetaryValue);
 	void FillVwapParams(Order& baseOrder, double maxPctVol, std::string startTime, std::string endTime,
@@ -66,6 +66,8 @@ public:
 	void updateOrder(std::vector<int> orderIdList, double aggBps, int waitTime_s);
 	void closeAllStockAP(double maxPctVol, std::string riskAversion, std::string startTime, std::string endTime,
 		bool forceCompletion, bool allowPastTime, double monetaryValue);	//close all positions using arrival price algo
+	void closeAllStockVWAP(double maxPctVol, std::string startTime, std::string endTime,
+		bool allowPastEndTime, bool noTakeLiq, bool speedUp, double monetaryValue);	////close all positions using VWAP
 	void closePartAP(std::vector<STOCK_ORD> orderList, double maxPctVol, std::string riskAversion, std::string startTime, std::string endTime,
 		bool forceCompletion, bool allowPastTime, double monetaryValue);	//close certain positions using arrival price algo
 	void closePartVWAP(std::vector<STOCK_ORD> orderList, double maxPctVol, std::string startTime, std::string endTime,

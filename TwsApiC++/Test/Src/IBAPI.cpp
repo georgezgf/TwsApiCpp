@@ -107,13 +107,15 @@ double IBAPI::roundNum(int share, double num, double minTick) {
 	
 }
 
-std::vector<STOCK_ORD> IBAPI::truncLmtPrice(std::vector<STOCK_ORD>stockOrder) {
+std::vector<STOCK_ORD> IBAPI::truncLmtPrice(std::vector<STOCK_ORD>stockOrder,bool printMinTick) {
 	printInfo("Truncate limit price.  ");
 
 	for (int i = 0; i < stockOrder.size(); i++) {
 		double minTick = queryMinTick(stockOrder[i].ticker);
 		stockOrder[i].orderPrice = roundNum(stockOrder[i].orderQty, stockOrder[i].orderPrice, minTick);
-		std::cout << "Mintick = " << minTick << ". orderPrice ="<< stockOrder[i].orderPrice << ".\n";
+		if (printMinTick == TRUE) {
+			std::cout << "Mintick = " << minTick << ". orderPrice =" << stockOrder[i].orderPrice << ".\n";
+		}
 	}
 	return stockOrder;
 }
@@ -164,6 +166,7 @@ std::vector<STOCK_ORD> IBAPI::genOrder(std::vector<CSV_READ> csvRead, double mul
 
 	std::vector<STOCK_ORD> stockOrder;
 
+	double stockValue = 0;
 	double tradeValue = 0;
 
 	std::cout << "Input CSVlist size = " << csvRead.size() << std::endl;
@@ -232,20 +235,28 @@ std::vector<STOCK_ORD> IBAPI::genOrder(std::vector<CSV_READ> csvRead, double mul
 		}
 		if (share != 0 && csvRead[i].price>=3) {
 			stockOrder.push_back({ ticker, csvRead[i].lmtPrice, share, primaryExch,csvRead[i].nnlsSPX,csvRead[i].nnlsRUT,csvRead[i].dmv });
-			tradeValue += csvRead[i].price*abs(share);
+			stockValue += csvRead[i].price*abs(share);
 		}
 		
 	}
-	std::cout << "Generate orderlist size = " << stockOrder.size() << std::endl;
-	std::cout << "Total value of stocks = " << tradeValue << std::endl;
+	std::cout << "Generate orderlist size = " << stockOrder.size() << "\n";
+	std::cout << "Total value of stocks = " << stockValue << "\n";
 
+	std::vector<double> exposure = orderHedgeCal(stockOrder);
+
+	tradeValue = stockValue + abs(exposure[0]) + abs(exposure[1]);
+
+	std::cout << "Totval value of stocks + hedge value = " << tradeValue << "\n";
 
 	//if stock value is larger than the total buying power, reduce the multiplier
 	if (tradeValue > buyingPower) {
 		std::cout << "Buying power = " << buyingPower << ", smaller than the total trade value. Adjust the multiplier." << std::endl;
 		double factor = buyingPower / tradeValue ;
 		std::cout << "New factor = " << factor << ".   " << std::endl;
+		double updateStockValue = 0;
 		double updateTradeValue = 0;
+		double SPXexp = 0;
+		double RUTexp = 0;
 
 		//if the factor is less than 0.67, trade less stocks (remove lower score stock) instead of reducing the factor
 		if (factor < 0.67) {
@@ -255,21 +266,36 @@ std::vector<STOCK_ORD> IBAPI::genOrder(std::vector<CSV_READ> csvRead, double mul
 			for (int i = 0; i < stockOrder.size(); i++) {
 				int tmpQty = abs(stockOrder[i].orderQty*0.67);
 				int sign = stockOrder[i].orderQty > 0 ? 1 : -1;
-				tmpQty = sign * int(trunc(tmpQty / 100) * 100);	//round to 100 stocks
+				tmpQty = sign * int(trunc(tmpQty / 10) * 10);	//round to 10 stocks
 				//stockOrder[i].orderQty = stockOrder[i].orderQty * 0.67;
 				//std::cout << "new orderQty = " << stockOrder[i].orderQty << ". tmpQty = " << tmpQty << std::endl;
 				stockOrder[i].orderQty = tmpQty;
-				updateTradeValue += stockOrder[i].orderPrice * abs(stockOrder[i].orderQty);
+				updateStockValue += stockOrder[i].orderPrice * abs(stockOrder[i].orderQty);
 			}
+			std::vector<double> updateExposure = orderHedgeCal(stockOrder);
+			SPXexp = updateExposure[0];
+			RUTexp = updateExposure[1];
+			updateTradeValue = updateStockValue + abs(SPXexp) + abs(RUTexp);
 
 			//double targetTradeValue = tradeValue*0.67;
 			//std::cout << "Update trade value = " << targetTradeValue << std::endl;
 
-			//remove from the lowest score stock one by one until the update trade value is less than 95% of the buying power
+			//remove from the lowest score stock one by one until the update trade value is less than 90% of the buying power
 			while (updateTradeValue > 0.9 * buyingPower) {
-				std::cout << "Remove stock: " << stockOrder.back().ticker << std::endl;
-				updateTradeValue -= stockOrder.back().orderPrice * abs(stockOrder.back().orderQty);
-				std::cout << "Update trade value = " << updateTradeValue << ". Order size=" << stockOrder.size() <<std::endl;
+				std::cout << "Remove stock: " << stockOrder.back().ticker << ". orderQty: " << stockOrder.back().orderQty  << std::endl;
+
+				double reStockValue = stockOrder.back().orderPrice * abs(stockOrder.back().orderQty);	//removed stock value
+				double reStockSPX = stockOrder.back().orderPrice * stockOrder.back().orderQty * stockOrder.back().nnlsSPX;	//removed stock SPX exposure
+				double reStockRUT = stockOrder.back().orderPrice * stockOrder.back().orderQty * stockOrder.back().nnlsRUT;	//removed stock RUT exposure
+
+				updateStockValue -= reStockValue;
+				SPXexp -= reStockSPX;
+				RUTexp -= reStockRUT;
+
+				updateTradeValue = updateStockValue + abs(SPXexp) + abs(RUTexp);
+				
+				std::cout << "Update trade value = " << updateTradeValue << ". Order size=" << stockOrder.size() << ". update SPX exposure: " << SPXexp 
+					<< ". update RUT exposure: " << RUTexp << ". \n";
 				stockOrder.pop_back();
 			}
 		}
@@ -277,15 +303,19 @@ std::vector<STOCK_ORD> IBAPI::genOrder(std::vector<CSV_READ> csvRead, double mul
 			for (int i = 0; i < stockOrder.size(); i++) {
 				int tmpQty = abs(stockOrder[i].orderQty*factor);
 				int sign = stockOrder[i].orderQty > 0 ? 1 : -1;
-				tmpQty = sign * int(trunc(tmpQty / 100) * 100);	//round to 100 stocks
+				tmpQty = sign * int(trunc(tmpQty / 10) * 10);	//round to 10 stocks
 				//stockOrder[i].orderQty = stockOrder[i].orderQty * factor;
 				//std::cout << "new orderQty = " << stockOrder[i].orderQty << ". tmpQty = " << tmpQty << std::endl;
 				stockOrder[i].orderQty = tmpQty;
-				updateTradeValue += stockOrder[i].orderPrice * abs(stockOrder[i].orderQty);
+				updateStockValue += stockOrder[i].orderPrice * abs(stockOrder[i].orderQty);
 			}
 		}
+
+		exposure = orderHedgeCal(stockOrder);
+
+		updateTradeValue = updateStockValue + abs(exposure[0]) + abs(exposure[1]);
 		
-		std::cout << "Update trade value = " << updateTradeValue << std::endl;
+		std::cout << "Update stock value = " << updateStockValue << ". Update stock+hedge value: " << updateTradeValue << ". \n";
 	
 	}
 	//end stock value restriction.
@@ -1136,6 +1166,53 @@ void IBAPI::closeAllStockAP(double maxPctVol, std::string riskAversion, std::str
 	sendAPOrder(closeOrd, maxPctVol, riskAversion, startTime, endTime, forceCompletion, allowPastTime, monetaryValue);
 }
 
+
+void IBAPI::closeAllStockVWAP(double maxPctVol, std::string startTime, std::string endTime,
+	bool allowPastEndTime, bool noTakeLiq, bool speedUp, double monetaryValue) {
+
+	printInfo("Close all positions using VWAP. ");
+
+	std::vector<STOCK_ORD> closeOrd;
+	STOCK_ORD tmpOrd;
+	//std::vector<std::string> closeTickerList;
+	bool zeroPos = true;	// make sure there is position to close.
+
+	std::vector<POS> Position = queryPos();
+
+	if (Position.size() == 0) {
+		std::cout << "No position hold. Cannot close." << std::endl;
+		return;
+	}
+
+	for (int i = 0; i < Position.size(); i++) {
+		//closeTickerList.push_back(Position[i].ticker);
+		if (Position[i].posQty != 0) {
+			zeroPos = false;
+		}
+	}
+
+	if (zeroPos == true) {
+		std::cout << "No position hold. Cannot close. zeroPos = " << zeroPos << std::endl;
+		return;
+	}
+
+	for (int i = 0; i < Position.size(); i++) {
+		//only close stock positions for now
+		if (Position[i].posQty != 0 && Position[i].secType == "STK") {
+			// posQty>0: buy position. Need to sell at ask price to close; 
+			// posQty<0: sell position. Need to buy at bid price to close.
+			std::string primaryExchange = queryPriExch(Position[i].ticker);
+			tmpOrd = { Position[i].ticker, -1, -Position[i].posQty, primaryExchange };	//set price to -1 because use market order
+			std::cout << "Close ticker:" << tmpOrd.ticker << ". Close position: " << tmpOrd.orderQty << std::endl;
+			closeOrd.push_back(tmpOrd);
+		}
+	}
+
+	printInfo("Send VWAP close orders. ");
+
+	sendVWAPOrder(closeOrd, maxPctVol, startTime, endTime, allowPastEndTime, noTakeLiq, speedUp, monetaryValue);
+}
+
 void IBAPI::closePartAP(std::vector<STOCK_ORD> orderList, double maxPctVol, std::string riskAversion, std::string startTime, std::string endTime,
 	bool forceCompletion, bool allowPastTime, double monetaryValue) {
 	printInfo("Close part of the positions using Arrival Price algo. ");
@@ -1275,10 +1352,10 @@ void IBAPI::splitLOOVWAPOrders(std::vector<STOCK_ORD>lyStock, std::vector<STOCK_
 	
 
 	for (int i = 0; i < lyStock.size(); i++) {
-		tmpabsrql = LOOPer*lyStock[i].dmv - abs(lyStock[i].orderQty) > 100 ? LOOPer*lyStock[i].dmv - abs(lyStock[i].orderQty) : 0;
+		tmpabsrql = LOOPer*lyStock[i].dmv - abs(lyStock[i].orderQty) > 10 ? LOOPer*lyStock[i].dmv - abs(lyStock[i].orderQty) : 0;
 
 		if (tmpabsrql > 0) {
-			absrql = int(round(tmpabsrql/100)*100);
+			absrql = int(round(tmpabsrql/10)*10);
 
 			int sign = lyStock[i].orderQty > 0 ? 1 : -1;
 			rql = sign * absrql;
