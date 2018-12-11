@@ -149,11 +149,11 @@ void MyEWrapper::updatePortfolio(const Contract& contract, int position, double 
 
 void MyEWrapper::position(const IBString& account, const Contract& contract, int position, double avgCost)
 {
-	/*
-	printf("Position. %s - Symbol: %s, SecType: %s, Currency: %s, Position: %d, Avg Cost: %g\n", \
-		account.c_str(), contract.symbol.c_str(), contract.secType.c_str(), contract.currency.c_str(), position, avgCost);
-*/
-	POS tmpPos = { contract.symbol.c_str(), avgCost, position, contract.secType.c_str() };
+	
+	//printf("Position. %s - Symbol: %s, SecType: %s, Currency: %s, Local symbol: %s, Position: %d, Avg Cost: %g\n", \
+		account.c_str(), contract.symbol.c_str(), contract.secType.c_str(), contract.currency.c_str(), contract.localSymbol.c_str(), position, avgCost);
+
+	POS tmpPos = { contract.symbol.c_str(), avgCost, position, contract.secType.c_str(), contract.localSymbol.c_str()};
 
 	allPos.push_back(tmpPos);
 }
@@ -280,12 +280,17 @@ void MyEWrapper::accountSummary(int reqId, const IBString& account, const IBStri
 
 	if (tmpTag == "TotalCashValue") {
 		cashBalance = std::stod(value.c_str());
-		//std::cout << "CashBalance = "  << cashBalance <<std::endl;
+		std::cout << "CashBalance = "  << cashBalance <<std::endl;
 	}
 
 	if (tmpTag == "BuyingPower") {
 		buyingPower = std::stod(value.c_str());
 		//std::cout << "rrr Buying power = "  << value.c_str() <<std::endl;
+	}
+
+	if (tmpTag == "NetLiquidation") {
+		NetLiquidation = std::stod(value.c_str());
+		std::cout << "NetLiquidation  = "  << value.c_str() <<std::endl;
 	}
 }
 

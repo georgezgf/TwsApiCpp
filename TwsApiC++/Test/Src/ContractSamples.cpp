@@ -299,11 +299,11 @@ Contract ContractSamples::FutureWithLocalSymbol(){
 	return contract;
 }
 
-Contract ContractSamples::FutureWithLocalSymbol(std::string localSymbol,std::string exchange) {
+Contract ContractSamples::FutureWithLocalSymbol(std::string localSymbol) {
 	//! [futcontract_local_symbol]
 	Contract contract;
 	contract.secType = "FUT";
-	contract.exchange = exchange;
+	contract.exchange = "GLOBEX";
 	contract.currency = "USD";
 	contract.localSymbol = localSymbol;
 	//! [futcontract_local_symbol]

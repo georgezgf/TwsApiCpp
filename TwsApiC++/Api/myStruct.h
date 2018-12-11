@@ -57,6 +57,7 @@ struct POS {
 	double avgCost;
 	int posQty;
 	std::string secType;
+	std::string localSymbol;
 };
 
 struct N_QUOTE_STATUS {
@@ -76,4 +77,5 @@ struct CSV_READ {
 	double nnlsSPX;
 	double nnlsRUT;
 	double lmtPrice;
+	int qty;
 };

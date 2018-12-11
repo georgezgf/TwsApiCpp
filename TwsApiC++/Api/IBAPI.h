@@ -26,12 +26,16 @@ public:
 	/*general functions*/
 	void printInfo(std::string info);
 	std::vector<CSV_READ> getCSV(std::string str);
+	std::vector<CSV_READ> getanCSV(std::string str);
+	std::vector<CSV_READ> getTradeCSV(std::string str);
 	double roundNum(int share, double num, double minTick);	//round price according to  mintick. Up round for sell, down round for buy
 	std::vector<STOCK_ORD> truncLmtPrice(std::vector<STOCK_ORD>stockOrder,bool printMinTick);	//truncate the limit price in stock order vector by minTick. The limit price is read from the csv files
 	void FillArrivalPriceParams(Order& baseOrder, double maxPctVol, std::string riskAversion, std::string startTime, std::string endTime,
 		bool forceCompletion, bool allowPastTime, double monetaryValue);
 	void FillVwapParams(Order& baseOrder, double maxPctVol, std::string startTime, std::string endTime,
 		bool allowPastEndTime, bool noTakeLiq, bool speedUp, double monetaryValue);
+	std::vector<STOCK_ORD> genANOrder(std::vector<CSV_READ> csvRead, std::vector<POS> allPos);
+	std::vector<STOCK_ORD> genTradeOrder(std::vector<CSV_READ> csvRead);
 	std::vector<STOCK_ORD> genOrder(std::vector<CSV_READ> csvRead,double multiplier, double maxPer,double buyingPower);	//generate order for trade from csv reading data, multiplier is for different accounts
 	std::vector<double> orderHedgeCal(std::vector<STOCK_ORD> stockOrd);	//calculate the exposure of SPY and IWM. Need the generated stock order and csv file
 	std::vector<STOCK_ORD> genHedgeOrder(double SPXexp, double RUTexp);	//generate hedge orders according to the exposure
@@ -47,6 +51,7 @@ public:
 	std::map<int, COMB_OPENORD> queryOrd();
 	int queryCash();
 	int queryBuyingPower();
+	int queryNetLiquidation();
 	std::string queryPriExch(std::string ticker);
 	std::vector<int> sendLmtOrder(std::vector<STOCK_ORD> lmtOrder);
 	std::vector<int> sendLOOOrder(std::vector<STOCK_ORD> looOrder);	//limit on open
@@ -57,7 +62,7 @@ public:
 	std::vector<int> modifyLmtOrder(std::map<int, MODIFY_ORD> updateOrder);
 	double queryMinTick(std::string ticker);
 	std::vector<int> sendAucOrder(std::vector<STOCK_ORD> AucOrder);
-	void sendFutureMktOrder(std::string localSymbol, std::string expiryDate, int orderQty);	//local symbol of a specific future defined by IB in its description
+	void sendFutureMktOrder(std::vector<CSV_READ> hedgeCSVRead);	//local symbol of a specific future defined by IB in its description
 
 	/**********************************************************************************************************/
 	/*advanced trade functions*/

@@ -28,6 +28,7 @@ public:
 	std::map<int, COMB_OPENORD> combOpenOrd;
 	double cashBalance;
 	double buyingPower;
+	double NetLiquidation;
 	std::string primaryExchange;
 
 	MyEWrapper();

@@ -27,7 +27,7 @@ public:
 	static Contract SimpleFuture();
 	static Contract SimpleFuture(std::string symbol, std::string expiryDate);
 	static Contract FutureWithLocalSymbol();
-	static Contract FutureWithLocalSymbol(std::string localSymbol,std::string exchange);
+	static Contract FutureWithLocalSymbol(std::string localSymbol);
 	static Contract FutureWithMultiplier();
 	static Contract WrongContract();
 	static Contract FuturesOnOptions();

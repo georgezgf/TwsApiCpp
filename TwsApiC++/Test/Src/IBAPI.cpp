@@ -30,6 +30,75 @@ void IBAPI::printInfo(std::string info) {
 	std::cout << std::left << std::setfill('*')<<std::setw(40)<< info <<std::endl;
 }
 
+std::vector<CSV_READ> IBAPI::getanCSV(std::string str) {
+
+	//Assume the csv file format: tick, score, price, dmv
+
+	printInfo("Read AN CSV.  ");
+
+	std::cout << "File name: " << str << std::endl;
+
+	std::ifstream file(str);
+	std::vector<std::string> row;
+	std::vector <CSV_READ> CSVRead;
+	CSV_READ tmpCSVRead;
+	int count = 0;
+	
+
+	for (CSVIterator loop(file); loop != CSVIterator(); ++loop)
+	{
+		// Get rid of the first row (usually header). Save data from the second row.
+		if (count != 0) {
+			std::string ticker = (*loop)[0];
+			int day2an = std::stoi((*loop)[1]);
+			std::string anDate = (*loop)[2];
+			double nnlsSPX = std::stod((*loop)[3]);
+			double nnlsRUT = std::stod((*loop)[4]);
+			double price = std::stod((*loop)[5]);
+
+			tmpCSVRead = { ticker, 0, day2an, -1, 0, nnlsSPX, nnlsRUT, price };
+
+			CSVRead.push_back(tmpCSVRead);
+		}
+		count++;
+	}
+
+	return CSVRead;
+}
+
+std::vector<CSV_READ> IBAPI::getTradeCSV(std::string str) {
+
+	//Assume the csv file format: tick, score, price, dmv
+
+	printInfo("Read trade CSV.  ");
+
+	std::cout << "File name: " << str << std::endl;
+
+	std::ifstream file(str);
+	std::vector<std::string> row;
+	std::vector <CSV_READ> CSVRead;
+	CSV_READ tmpCSVRead;
+	int count = 0;
+
+
+	for (CSVIterator loop(file); loop != CSVIterator(); ++loop)
+	{
+		// Get rid of the first row (usually header). Save data from the second row.
+		if (count != 0) {
+			std::string ticker = (*loop)[0];
+			int qty = std::stoi((*loop)[1]);
+
+			tmpCSVRead = { ticker, 0,0, 0, 0, 0, 0, 0, qty};
+
+			CSVRead.push_back(tmpCSVRead);
+		}
+		count++;
+	}
+
+	return CSVRead;
+}
+
+
 std::vector<CSV_READ> IBAPI::getCSV(std::string str) {
 
 	//Assume the csv file format: tick, score, price, dmv
@@ -161,6 +230,145 @@ void IBAPI::FillVwapParams(Order& baseOrder, double maxPctVol, std::string start
 	baseOrder.algoParams->push_back(tag7);
 }
 
+std::vector<STOCK_ORD> IBAPI::genANOrder(std::vector<CSV_READ> csvRead, std::vector<POS> allPos) {
+	printInfo("Generate orders from anCSV reading. ");
+
+	std::vector<STOCK_ORD> stockOrder;
+	std::vector<std::string> posVec;
+	std::vector<std::string>::iterator it;
+
+	std::cout << "Input anCSVlist size = " << csvRead.size() << std::endl;
+
+	// create ticker vector
+	for (int i = 0; i < allPos.size(); i++) {
+		posVec.push_back(allPos[i].ticker);
+	}
+
+	for (int i = 0; i < csvRead.size(); i++) {
+		int share = 0;
+
+		std::smatch m;
+		std::regex r("\\.(\\w)");
+		std::string primaryExch;
+
+		//extract the primary exchange
+		if (std::regex_search(csvRead[i].ticker, m, r)) {
+			//std::cout << "Ticker primary exchange = " << csvRead[i].ticker << ". size = " << m.str(1) << std::endl;
+			char exch = m.str(1)[0];
+			//std::cout << "exch: " << exch << std::endl;
+
+			switch (exch)
+			{
+			case 'O':
+				primaryExch = "ISLAND";
+				break;
+			case 'N':
+				primaryExch = "NYSE";
+				break;
+			case 'A':
+				primaryExch = "AMEX";
+				break;
+			default:
+				primaryExch = "";
+			}
+		}
+		//std::cout << "ticker: " << csvRead[i].ticker << ". Score: " << csvRead[i].score << std::endl;
+
+		std::regex r1("\"|\\..");	//get rid of ".X" and "" for ticker in the original CSV file
+									//std::cout << std::regex_replace(tmpticker, r1, "") << std::endl;
+		std::string ticker = std::regex_replace(csvRead[i].ticker, r1, "");
+
+
+		// day2an -21 ~ -7: max ($20000 for each stock)
+		if (csvRead[i].day2er <= -7 && csvRead[i].day2er > -21) {
+			double tmp = 20000 / csvRead[i].lmtPrice;
+			int targetShare = int(trunc(tmp / 10) * 10);	//down round share to 10
+
+			it = std::find(posVec.begin(), posVec.end(), ticker);
+			//std::cout << "price: " << csvRead[i].lmtPrice << "\n";
+
+			if (it != posVec.end()) {
+				int adjShare = targetShare - allPos[it - posVec.begin()].posQty;
+				//std::cout << "adjShare: " << adjShare << "\n";
+				if (adjShare != 0 && abs(adjShare >= 100)) {
+					stockOrder.push_back({ ticker, csvRead[i].lmtPrice, adjShare, primaryExch,csvRead[i].nnlsSPX,csvRead[i].nnlsRUT,csvRead[i].dmv });
+				}
+			}
+			else {
+				stockOrder.push_back({ ticker, csvRead[i].lmtPrice, targetShare, primaryExch,csvRead[i].nnlsSPX,csvRead[i].nnlsRUT,csvRead[i].dmv });
+			}
+		}
+		// day2an -2 ~ inf: 0 position
+		else if (csvRead[i].day2er >= -2) {
+			it = std::find(posVec.begin(), posVec.end(), ticker);
+			int targetShare = 0;
+
+			if (it != posVec.end()) {
+				int adjShare = targetShare - allPos[it - posVec.begin()].posQty;
+				if (adjShare != 0) {
+					stockOrder.push_back({ ticker, csvRead[i].lmtPrice, adjShare, primaryExch,csvRead[i].nnlsSPX,csvRead[i].nnlsRUT,csvRead[i].dmv });
+				}
+			}
+		}
+
+	}
+
+	std::cout << "Generate orderlist size = " << stockOrder.size() << "\n";
+
+	return stockOrder;
+}
+
+std::vector<STOCK_ORD> IBAPI::genTradeOrder(std::vector<CSV_READ> csvRead) {
+	printInfo("Generate orders from tradeCSV reading. ");
+
+	std::vector<STOCK_ORD> stockOrder;
+
+	std::cout << "Input tradeCSV size = " << csvRead.size() << std::endl;
+
+
+	for (int i = 0; i < csvRead.size(); i++) {
+		int share = 0;
+
+		std::smatch m;
+		std::regex r("\\.(\\w)");
+		std::string primaryExch;
+
+		//extract the primary exchange
+		if (std::regex_search(csvRead[i].ticker, m, r)) {
+			//std::cout << "Ticker primary exchange = " << csvRead[i].ticker << ". size = " << m.str(1) << std::endl;
+			char exch = m.str(1)[0];
+			//std::cout << "exch: " << exch << std::endl;
+
+			switch (exch)
+			{
+			case 'O':
+				primaryExch = "ISLAND";
+				break;
+			case 'N':
+				primaryExch = "NYSE";
+				break;
+			case 'A':
+				primaryExch = "AMEX";
+				break;
+			default:
+				primaryExch = "";
+			}
+		}
+		//std::cout << "ticker: " << csvRead[i].ticker << ". Score: " << csvRead[i].score << std::endl;
+
+		std::regex r1("\"|\\..");	//get rid of ".X" and "" for ticker in the original CSV file
+									//std::cout << std::regex_replace(tmpticker, r1, "") << std::endl;
+		std::string ticker = std::regex_replace(csvRead[i].ticker, r1, "");
+
+		stockOrder.push_back({ ticker, csvRead[i].lmtPrice, csvRead[i].qty, primaryExch,csvRead[i].nnlsSPX,csvRead[i].nnlsRUT,csvRead[i].dmv });
+
+	}
+
+	std::cout << "Generate orderlist size = " << stockOrder.size() << "\n";
+
+	return stockOrder;
+}
+
 std::vector<STOCK_ORD> IBAPI::genOrder(std::vector<CSV_READ> csvRead, double multiplier, double maxPer, double buyingPower) {
 	printInfo("Generate orders from CSV reading. ");
 
@@ -215,7 +423,7 @@ std::vector<STOCK_ORD> IBAPI::genOrder(std::vector<CSV_READ> csvRead, double mul
 									//std::cout << std::regex_replace(tmpticker, r1, "") << std::endl;
 		std::string ticker = std::regex_replace(csvRead[i].ticker, r1, "");
 
-		if (abs(csvRead[i].score) >= 35 && abs(csvRead[i].score) < 45) {
+		if (abs(csvRead[i].score) >= 30 && abs(csvRead[i].score) < 45) {
 			double tmp = std::min(multiplier*10000 / csvRead[i].price, maxPer*csvRead[i].dmv);
 			int tmpshare = int(trunc(tmp / 10) * 10);	//down round share to 10
 			share = csvRead[i].score > 0 ? tmpshare : -tmpshare;
@@ -410,7 +618,7 @@ int IBAPI::queryNextOrderId() {
 
 double IBAPI::queryMinTick(std::string ticker) {
 
-	printInfo("Query minimum tick. ");
+	//printInfo("Query minimum tick. ");
 
 	EW.minTick=0;
 	EW.b_ctrDetail = false;
@@ -652,6 +860,30 @@ int IBAPI::queryBuyingPower() {
 	return EW.buyingPower;
 }
 
+int IBAPI::queryNetLiquidation() {
+
+	printInfo("Request account NetLiquidation. ");
+
+	EW.b_accSummary = false;
+
+	EC->reqAccountSummary(9003, "All", "NetLiquidation");
+
+	int count = 0;
+
+	while (!EW.b_accSummary) {
+		Sleep(100);
+		count++;
+		if (count > 100) {
+			std::cout << "Request NetLiquidation time out. Break." << std::endl;
+			break;
+		}
+	}
+
+	EC->cancelAccountSummary(9003);
+
+	return EW.NetLiquidation;
+}
+
 std::vector<double> IBAPI::monitorExp(std::vector<STOCK_ORD> orderList) {
 	printInfo("Monitor index exposure");
 
@@ -813,7 +1045,7 @@ std::vector<int> IBAPI::sendAucOrder(std::vector<STOCK_ORD> aucOrder) {
 	return orderIdList;
 }
 
-void IBAPI::sendFutureMktOrder(std::string localSymbol, std::string exchange, int orderQty) {
+void IBAPI::sendFutureMktOrder(std::vector<CSV_READ> hedgeCSVRead) {
 	printInfo("Send future order. ");
 	EW.combOpenOrd.clear();
 	EW.b_openOrdReady = false;
@@ -822,10 +1054,25 @@ void IBAPI::sendFutureMktOrder(std::string localSymbol, std::string exchange, in
 	int count = 0;
 	int orderId = queryNextOrderId();
 
-	action = orderQty > 0 ? "BUY" : "SELL";
-	EC->placeOrder(EW.m_orderId++, ContractSamples::FutureWithLocalSymbol(localSymbol,exchange), OrderSamples::MarketOrder(action, abs(orderQty)));	
+	for (int i = 0; i < hedgeCSVRead.size(); i++) {
+		if (hedgeCSVRead[i].qty == 0) {
+			continue;
+		}
+		action = hedgeCSVRead[i].qty > 0 ? "BUY" : "SELL";
+		std::cout << "ticker" << hedgeCSVRead[i].ticker << ". qty: " << hedgeCSVRead[i].qty << "\n";
+		EC->placeOrder(EW.m_orderId++, ContractSamples::FutureWithLocalSymbol(hedgeCSVRead[i].ticker), OrderSamples::MarketOrder(action, abs(hedgeCSVRead[i].qty)));
+	}
 
-	std::cout << "Send future order finish. " << std::endl;
+	while (!EW.b_openOrdReady) {
+		Sleep(100);
+		count++;
+		if (count > 20) {
+			std::cout << "Open order call back time out. Break." << std::endl;
+			break;
+		}
+	}
+
+	std::cout << "Send future orders finish. " << std::endl;
 }
 
 
