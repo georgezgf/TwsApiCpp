@@ -2,7 +2,6 @@
 
 using namespace TwsApi;
 
-
 #include <windows.h>		// Sleep(), in miliseconds
 #include <process.h>
 #include <time.h> 
@@ -50,14 +49,27 @@ int main(int argc, char *argv[])
 
 	int port = std::stoi(lines[0]);
 	double multiplier = std::stod(lines[1]);
-	std::string openStartTime = lines[2];
-	std::string openEndTime = lines[3];
-	std::string closeStartTime = lines[4];
-	std::string closeEndTime = lines[5];
+	double LOOdmvPercentage = std::stod(lines[2]);
+	std::string openStartTime = lines[3];
+	std::string openEndTime = lines[4];
+	std::string closeStartTime = lines[5];
+	std::string closeEndTime = lines[6];
+	std::string erstFilePath = lines[7];
+	std::string andvTradeFilePath = lines[8];
+	std::string posFileSavePath = lines[9];
+	std::string hedgeFileSavePath = lines[10];
+	std::string accSummarySavePath = lines[11];
 
 	std::cout << "Port = " << port << ". Multiplier = " << multiplier << "\n";
+	std::cout << "LOO dmv Percentage = " << LOOdmvPercentage << ". LOO dmv Percentage = " << LOOdmvPercentage << "\n";
 	std::cout << "Open time: " << openStartTime << "=>" << openEndTime << "\n";
 	std::cout << "Close time: " << closeStartTime << "=>" << closeEndTime << "\n";
+	
+	std::cout << "Erst file path: " << erstFilePath << "\n";
+	std::cout << "ANDV file path: " << andvTradeFilePath << "\n";
+	std::cout << "Will save position files to: " << posFileSavePath << "\n";
+	std::cout << "Will save hedge files to: " << hedgeFileSavePath << "\n";
+	std::cout << "Will save account summary file to: " << accSummarySavePath << "\n";
 
 	time_t rawtime;
 	struct tm * timeinfo;
@@ -83,7 +95,7 @@ int main(int argc, char *argv[])
 
 	TEST(0, testAPI.EC->eDisconnect());	// only for test purposes
 
-	if (TEST(0, testAPI.EC->eConnect("", port, 55)))
+	if (TEST(0, testAPI.EC->eConnect("", port, 3)))
 	{
 		PrintProcessId, printf("ServerVersion = %d\n", testAPI.EC->serverVersion());
 
@@ -97,9 +109,9 @@ int main(int argc, char *argv[])
 		
 #ifdef READCSV
 	
-		std::string csvFile = "D:\\Dropbox\\Public\\Finance\\syncFile\\UEI001\\erst.UEI001." + buffers + ".csv";
+		//std::string csvFile = "D:\\Dropbox\\Public\\Finance\\syncFile\\UEI001\\erst.UEI001." + buffers + ".csv";
 		//std::string csvFile = "D:\\Dropbox\\Public\\Finance\\syncFile\\UEI001\\erst.UEI001.2017-11-02.csv";
-
+		std::string csvFile = erstFilePath + "erst.UEI001." + buffers + ".csv";
 
 		std::vector<CSV_READ> CSVRead = testAPI.getCSV(csvFile);
 
@@ -115,49 +127,65 @@ int main(int argc, char *argv[])
 		double bp = testAPI.queryBuyingPower();
 		std::cout << "Buying power = " << bp << std::endl;
 		
-		std::vector<STOCK_ORD> lyOrder = testAPI.genOrder(CSVRead, multiplier, 0.0005,bp); //maxPercentage = 0.05% for ly (LOO orders)
-		std::vector<STOCK_ORD> ltOrder = testAPI.genOrder(CSVRead, 2, 0.002, 3000000);	//maxPercentage = 0.2% for lt (for both LOO and VWAP orders)
+		std::vector<STOCK_ORD> lyOrder = testAPI.genOrder(CSVRead, multiplier, LOOdmvPercentage, bp); //maxPercentage = 0.05% for ly (LOO orders)
+		//std::vector<STOCK_ORD> ltOrder = testAPI.genOrder(CSVRead, 2, 0.002, 3000000);	//maxPercentage = 0.2% for lt (for both LOO and VWAP orders)
 		
-		
-		
-		if (port == 7500) {	//ly
-			//std::cout << "Order submission size: " << lyOrder.size() << std::endl;
 
-			lyOrder = testAPI.truncLmtPrice(lyOrder,FALSE);//truncate the price by minTick (because use LOO for open orders, need to fill limit price)
+		lyOrder = testAPI.truncLmtPrice(lyOrder, FALSE); //truncate the price by minTick (because use LOO for open orders, need to fill limit price)
 
-			if (lyOrder.size() == 0) {
-				std::cout << "There is no stock to trade today. Stop program" << std::endl;
-				return 1;
-			}
-
-			std::cout << "lyOrder size:" << lyOrder.size() << "\n";
-			for (int i = 0; i < lyOrder.size(); i++) {
-
-				std::cout << "Ticker: " << lyOrder[i].ticker << ". Primary exchange: " << lyOrder[i].primaryExch
-					<< ". share: " << lyOrder[i].orderQty << ". Trunc limit price: " << lyOrder[i].orderPrice << "\n";
-
-				//gOrder[i].orderPrice = testAPI.roundNum(gOrder[i].orderQty, gOrder[i].orderPrice, minTick);
-			}
+		if (lyOrder.size() == 0) {
+			std::cout << "There is no stock to trade today. Stop program" << std::endl;
+			return 1;
 		}
-		if (port == 7498) {	//lt
 
-			
-			if (ltOrder.size() == 0) {
-				std::cout << "There is no stock to trade today. Stop program" << std::endl;
-				return 1;
-			}
+		std::cout << "lyOrder size:" << lyOrder.size() << "\n";
+		for (int i = 0; i < lyOrder.size(); i++) {
 
-			ltOrder = testAPI.truncLmtPrice(ltOrder,FALSE);
+			std::cout << "Ticker: " << lyOrder[i].ticker << ". Primary exchange: " << lyOrder[i].primaryExch
+				<< ". share: " << lyOrder[i].orderQty << ". Trunc limit price: " << lyOrder[i].orderPrice << "\n";
 
-			std::cout << "ltOrder size:" << ltOrder.size() << "\n";
-			for (int i = 0; i < ltOrder.size(); i++) {
-
-				std::cout << "Ticker: " << ltOrder[i].ticker << ". Primary exchange: " << ltOrder[i].primaryExch
-					<< ". share: " << ltOrder[i].orderQty << ". Trunc limit price: " << ltOrder[i].orderPrice << "\n";
-
-				//gOrder[i].orderPrice = testAPI.roundNum(gOrder[i].orderQty, gOrder[i].orderPrice, minTick);
-			}
+			//gOrder[i].orderPrice = testAPI.roundNum(gOrder[i].orderQty, gOrder[i].orderPrice, minTick);
 		}
+		
+		
+		//if (port == 7500) {	//ly
+		//	//std::cout << "Order submission size: " << lyOrder.size() << std::endl;
+
+		//	lyOrder = testAPI.truncLmtPrice(lyOrder,FALSE);//truncate the price by minTick (because use LOO for open orders, need to fill limit price)
+
+		//	if (lyOrder.size() == 0) {
+		//		std::cout << "There is no stock to trade today. Stop program" << std::endl;
+		//		return 1;
+		//	}
+
+		//	std::cout << "lyOrder size:" << lyOrder.size() << "\n";
+		//	for (int i = 0; i < lyOrder.size(); i++) {
+
+		//		std::cout << "Ticker: " << lyOrder[i].ticker << ". Primary exchange: " << lyOrder[i].primaryExch
+		//			<< ". share: " << lyOrder[i].orderQty << ". Trunc limit price: " << lyOrder[i].orderPrice << "\n";
+
+		//		//gOrder[i].orderPrice = testAPI.roundNum(gOrder[i].orderQty, gOrder[i].orderPrice, minTick);
+		//	}
+		//}
+		//if (port == 7498) {	//lt
+
+		//	
+		//	if (ltOrder.size() == 0) {
+		//		std::cout << "There is no stock to trade today. Stop program" << std::endl;
+		//		return 1;
+		//	}
+
+		//	ltOrder = testAPI.truncLmtPrice(ltOrder,FALSE);
+
+		//	std::cout << "ltOrder size:" << ltOrder.size() << "\n";
+		//	for (int i = 0; i < ltOrder.size(); i++) {
+
+		//		std::cout << "Ticker: " << ltOrder[i].ticker << ". Primary exchange: " << ltOrder[i].primaryExch
+		//			<< ". share: " << ltOrder[i].orderQty << ". Trunc limit price: " << ltOrder[i].orderPrice << "\n";
+
+		//		//gOrder[i].orderPrice = testAPI.roundNum(gOrder[i].orderQty, gOrder[i].orderPrice, minTick);
+		//	}
+		//}
 		/*
 		std::vector<double> exposure = testAPI.orderHedgeCal(lyOrder);
 		
@@ -197,20 +225,16 @@ int main(int argc, char *argv[])
 		//std::vector<int> hedgeOrderList = testAPI.openMktAP(hedgeOrder, 0.05, "Passive", openStartTime, openEndTime, false, true, 100000);
 		//testAPI.EC->reqGlobalCancel();
 
+		std::vector<int> openOrderList = testAPI.sendLOOOrder(lyOrder);
 
+		//if (port == 7500) {	//use limit on open order for ly
+		//	std::vector<int> openOrderList = testAPI.sendLOOOrder(lyOrder);
+		//}
+		//if (port==7498) {	//all the other accounts use VWAP
+		//	testAPI.splitLOOVWAPOrders(lyOrder, ltOrder,0.0005, 0.05, openStartTime, openEndTime, false, false, false, 100000);
 
-		
-		
-		
-
-		if (port == 7500) {	//use limit on open order for ly
-			std::vector<int> openOrderList = testAPI.sendLOOOrder(lyOrder);
-		}
-		if (port==7498) {	//all the other accounts use VWAP
-			testAPI.splitLOOVWAPOrders(lyOrder, ltOrder,0.0005, 0.05, openStartTime, openEndTime, false, false, false, 100000);
-
-		//	std::vector<int> openOrderList = testAPI.openMktVWAP(gOrder, 0.05, openStartTime, openEndTime, false, false, false, 100000);
-		}
+		////	std::vector<int> openOrderList = testAPI.openMktVWAP(gOrder, 0.05, openStartTime, openEndTime, false, false, false, 100000);
+		//}
 		
 
 		//std::vector<int> hedgeOrderList = testAPI.openMktVWAP(hedgeOrder, 0.05, closeStartTime, closeEndTime, false, false, true, 100000);
@@ -231,22 +255,21 @@ int main(int argc, char *argv[])
 
 //			testAPI.monitorExp(gOrder);
 
-if (combOrd.size() == 0) {
-	allPos = testAPI.queryPos();
-
-	std::cout << "Position size =" << allPos.size() << std::endl;
+			if (combOrd.size() == 0) {
+				allPos = testAPI.queryPos();
+				std::cout << "Position size =" << allPos.size() << std::endl;
 
 	//				for (int i = 0; i < allPos.size(); i++) {
 	//					std::cout << "Ticker: " << allPos[i].ticker << ". Security type: " << allPos[i].secType << ". Position: " 
 	//						<< allPos[i].posQty << ". Avg cost: " << allPos[i].avgCost << "\n";
 	//				}
+				break;
+			}
 
-	break;
-}
-
-Sleep(1000 * 60);	//sleep for 1 min
+			Sleep(1000 * 60);	//sleep for 1 min
 		}
 
+		testAPI.closePartVWAP(lyOrder, 0.05, closeStartTime, closeEndTime, true, false, false, 100000);
 
 
 		/*
@@ -257,13 +280,13 @@ Sleep(1000 * 60);	//sleep for 1 min
 		//testAPI.EC->reqGlobalCancel();
 
 		//Sleep(5000);
-		if (port == 7500) {
-			testAPI.closePartVWAP(lyOrder, 0.05, closeStartTime, closeEndTime, true, false, false, 100000);
-		}
+		//if (port == 7500) {
+		//	testAPI.closePartVWAP(lyOrder, 0.05, closeStartTime, closeEndTime, true, false, false, 100000);
+		//}
 
-		if (port == 7498) {
-			testAPI.closePartVWAP(ltOrder, 0.05, closeStartTime, closeEndTime, true, false, false, 100000);
-		}
+		//if (port == 7498) {
+		//	testAPI.closePartVWAP(ltOrder, 0.05, closeStartTime, closeEndTime, true, false, false, 100000);
+		//}
 
 		//testAPI.closePartAP(gOrder, 0.05, "Passive", closeStartTime, closeEndTime, true, false, 100000);
 		//testAPI.closeAllStockAP( 0.05, "Passive", closeStartTime, closeEndTime, true, false, 100000);
@@ -303,14 +326,14 @@ Sleep(1000 * 60);	//sleep for 1 min
 
 #ifdef POSMONITOR
 		//std::string anPosFile = "D:\\Cornerstone\\positions\\pos-" + buffers + ".csv";
-
-		std::string anPosFile = "D:\\Cornerstone\\positions\\paper-pos-" + buffers + ".csv";
+		//std::string PosFile = "D:\\Cornerstone\\positions\\paper-pos-" + buffers + ".csv";
+		std::string PosFile = posFileSavePath + "pos-" + buffers + ".csv";
 
 		allPos = testAPI.queryPos();
 		std::cout << "Position size =" << allPos.size() << "\n";
 
 		while (TRUE) {
-			std::ofstream outFile(anPosFile);
+			std::ofstream outFile(PosFile);
 
 			allPos = testAPI.queryPos();
 			std::cout << "Position size =" << allPos.size() << "\n";
@@ -323,7 +346,7 @@ Sleep(1000 * 60);	//sleep for 1 min
 
 			outFile << "FILEEND";
 
-			std::cout << "Finish writing position to file. Path: " << anPosFile << "\n";
+			std::cout << "Finish writing position to file. Path: " << PosFile << "\n";
 			outFile.close();
 
 			Sleep(1000 * 60);
@@ -385,25 +408,25 @@ Sleep(1000 * 60);	//sleep for 1 min
 #endif
 
 #ifdef ANDV
-		std::string tradeCSVFile = "D:\\Dropbox\\Public\\Finance\\syncFile\\tradeData\\tradeData." + buffers + ".csv";
+		//std::string tradeCSVFile = "D:\\Dropbox\\Public\\Finance\\syncFile\\tradeData\\tradeData." + buffers + ".csv";
+		std::string tradeCSVFile = andvTradeFilePath + "tradeData." + buffers + ".csv";
+		std::cout << "Open ANDV trade file: " << tradeCSVFile << ".\n";
+		
 		std::vector<CSV_READ> tradeCSVRead = testAPI.getTradeCSV(tradeCSVFile);
 
 		std::vector<STOCK_ORD> tradeOrder = testAPI.genTradeOrder(tradeCSVRead);
 
-		if (port == 7500) {
-
-			if (tradeOrder.size() == 0) {
-				std::cout << "There is no stock to trade today for AN/DV event. Stop program" << std::endl;
-				return 1;
-			}
-
-			std::cout << "anOrder size:" << tradeOrder.size() << "\n";
-			for (int i = 0; i < tradeOrder.size(); i++) {
-
-				std::cout << "Ticker: " << tradeOrder[i].ticker << ". Primary exchange: " << tradeOrder[i].primaryExch
-					<< ". share: " << tradeOrder[i].orderQty << "\n";
-			}
+		if (tradeOrder.size() == 0) {
+			std::cout << "There is no stock to trade today for AN/DV event. Stop program" << std::endl;
+			return 1;
 		}
+
+		std::cout << "anOrder size:" << tradeOrder.size() << "\n";
+		for (int i = 0; i < tradeOrder.size(); i++) {
+			std::cout << "Ticker: " << tradeOrder[i].ticker << ". Primary exchange: " << tradeOrder[i].primaryExch
+				<< ". share: " << tradeOrder[i].orderQty << "\n";
+		}
+		
 
 		std::string tradeStartTime = "09:30:01 EST";
 		std::string tradeCloseTime = "15:59:00 EST";
@@ -419,7 +442,8 @@ Sleep(1000 * 60);	//sleep for 1 min
 		std::cout << "BuyingPower = " << buyingPower << std::endl;
 
 		//std::string accFile = "D:\\Cornerstone\\Account\\Account-" + buffers + ".csv";
-		std::string accFile = "D:\\Cornerstone\\Account\\accountSummary.csv";
+		//std::string accFile = "D:\\Cornerstone\\Account\\accountSummary.csv";
+		std::string accFile = accSummarySavePath + "accountSummary.csv";
 		std::ofstream outFile;
 		outFile.open(accFile, std::ios::app);
 
@@ -431,7 +455,8 @@ Sleep(1000 * 60);	//sleep for 1 min
 
 #ifdef HEDGEORDER
 		//std::string hedgeCSVFile = "D:\\Cornerstone\\positions." + buffers + ".csv";
-		std::string hedgeCSVFile = "D:\\Cornerstone\\positions\\hedgeOrder-" + buffers + ".csv";
+		//std::string hedgeCSVFile = "D:\\Cornerstone\\positions\\hedgeOrder-" + buffers + ".csv";
+		std::string hedgeCSVFile = hedgeFileSavePath + "hedgeOrder-" + buffers + ".csv";
 		std::vector<CSV_READ> hedgeCSVRead = testAPI.getTradeCSV(hedgeCSVFile);
 
 		if (hedgeCSVRead.size() == 0) {
