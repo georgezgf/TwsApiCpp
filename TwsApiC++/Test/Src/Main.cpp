@@ -12,14 +12,14 @@ using namespace TwsApi;
 #define CurrentThreadId GetCurrentThreadId
 #define PrintProcessId printf("%ld  ", CurrentThreadId() )
 
-//#define READCSV		//uncomment this to read CSV files
-//#define SUBMITORDER	//uncomment this to submit open and close orders
+#define READCSV		//uncomment this to read CSV files
+#define SUBMITORDER	//uncomment this to submit open and close orders
 //#define TESTFUN		//uncomment this to test functions
 //#define BASKET
 //#define ANDV
 //#define ACCSUMMARY
 //#define POSMONITOR
-#define HEDGEORDER
+//#define HEDGEORDER
 
 int main(int argc, char *argv[])
 {
@@ -111,7 +111,8 @@ int main(int argc, char *argv[])
 	
 		//std::string csvFile = "D:\\Dropbox\\Public\\Finance\\syncFile\\UEI001\\erst.UEI001." + buffers + ".csv";
 		//std::string csvFile = "D:\\Dropbox\\Public\\Finance\\syncFile\\UEI001\\erst.UEI001.2017-11-02.csv";
-		std::string csvFile = erstFilePath + "erst.UEI001." + buffers + ".csv";
+		std::string csvFile = erstFilePath + "erst.tradeData." + buffers + ".csv";
+		//csvFile = erstFilePath + "erst.UEI001.2019-01-24.csv";
 
 		std::vector<CSV_READ> CSVRead = testAPI.getCSV(csvFile);
 
@@ -121,29 +122,30 @@ int main(int argc, char *argv[])
 		}
 
 		for (int i = 0; i < CSVRead.size(); i++) {
-			std::cout << "Ticker: " << CSVRead[i].ticker << " Score = " << CSVRead[i].score << ". limit Price: " << CSVRead[i].lmtPrice << ". DMV: " << CSVRead[i].dmv << "\n";
+			std::cout << "Ticker: " << CSVRead[i].ticker <<  ". limit Price: " << CSVRead[i].lmtPrice << ". Order: " << CSVRead[i].qty << "\n";
 		}
 		
 		double bp = testAPI.queryBuyingPower();
 		std::cout << "Buying power = " << bp << std::endl;
 		
-		std::vector<STOCK_ORD> lyOrder = testAPI.genOrder(CSVRead, multiplier, LOOdmvPercentage, bp); //maxPercentage = 0.05% for ly (LOO orders)
+		std::vector<STOCK_ORD> erstOrder = testAPI.genTradeOrder(CSVRead);
+		//std::vector<STOCK_ORD> lyOrder = testAPI.genOrder(CSVRead, multiplier, LOOdmvPercentage, bp); //maxPercentage = 0.05% for ly (LOO orders)
 		//std::vector<STOCK_ORD> ltOrder = testAPI.genOrder(CSVRead, 2, 0.002, 3000000);	//maxPercentage = 0.2% for lt (for both LOO and VWAP orders)
 		
 
-		lyOrder = testAPI.truncLmtPrice(lyOrder, FALSE); //truncate the price by minTick (because use LOO for open orders, need to fill limit price)
+		erstOrder = testAPI.truncLmtPrice(erstOrder, FALSE); //truncate the price by minTick (because use LOO for open orders, need to fill limit price)
 
-		if (lyOrder.size() == 0) {
+		if (erstOrder.size() == 0) {
 			std::cout << "There is no stock to trade today. Stop program" << std::endl;
 			return 1;
 		}
 
-		std::cout << "lyOrder size:" << lyOrder.size() << "\n";
-		for (int i = 0; i < lyOrder.size(); i++) {
+		std::cout << "erstOrder size:" << erstOrder.size() << "\n";
+		for (int i = 0; i < erstOrder.size(); i++) {
 
-			std::cout << "Ticker: " << lyOrder[i].ticker << ". Primary exchange: " << lyOrder[i].primaryExch
-				<< ". share: " << lyOrder[i].orderQty << ". Trunc limit price: " << lyOrder[i].orderPrice << "\n";
-
+			std::cout << "Ticker: " << erstOrder[i].ticker << ". Primary exchange: " << erstOrder[i].primaryExch
+				<< ". share: " << erstOrder[i].orderQty << ". Trunc limit price: " << erstOrder[i].orderPrice << "\n";
+	
 			//gOrder[i].orderPrice = testAPI.roundNum(gOrder[i].orderQty, gOrder[i].orderPrice, minTick);
 		}
 		
@@ -225,7 +227,7 @@ int main(int argc, char *argv[])
 		//std::vector<int> hedgeOrderList = testAPI.openMktAP(hedgeOrder, 0.05, "Passive", openStartTime, openEndTime, false, true, 100000);
 		//testAPI.EC->reqGlobalCancel();
 
-		std::vector<int> openOrderList = testAPI.sendLOOOrder(lyOrder);
+		std::vector<int> openOrderList = testAPI.sendLOOOrder(erstOrder);
 
 		//if (port == 7500) {	//use limit on open order for ly
 		//	std::vector<int> openOrderList = testAPI.sendLOOOrder(lyOrder);
@@ -269,7 +271,7 @@ int main(int argc, char *argv[])
 			Sleep(1000 * 60);	//sleep for 1 min
 		}
 
-		testAPI.closePartVWAP(lyOrder, 0.05, closeStartTime, closeEndTime, true, false, false, 100000);
+		testAPI.closePartVWAP(erstOrder, 0.05, closeStartTime, closeEndTime, true, false, false, 100000);
 
 
 		/*

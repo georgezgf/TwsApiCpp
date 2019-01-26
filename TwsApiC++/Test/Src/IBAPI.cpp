@@ -124,15 +124,16 @@ std::vector<CSV_READ> IBAPI::getCSV(std::string str) {
 		// Get rid of the first row (usually header). Save data from the second row.
 		if (count != 0) {
 			std::string ticker = (*loop)[0];
-			double score = std::stod((*loop)[1]);
-			int day2er = std::stoi((*loop)[2]);	//for limit on open orders price adjustment
-			double price = std::stod((*loop)[3]);
-			int dmv = std::stoi((*loop)[4]);
-			double nnlsSPX = std::stod((*loop)[5]);
-			double nnlsRUT = std::stod((*loop)[6]);
-			double lmtPrice = std::stod((*loop)[7]);
+			//double score = std::stod((*loop)[1]);
+			//int day2er = std::stoi((*loop)[2]);	//for limit on open orders price adjustment
+			//double price = std::stod((*loop)[3]);
+			//int dmv = std::stoi((*loop)[4]);
+			//double nnlsSPX = std::stod((*loop)[5]);
+			//double nnlsRUT = std::stod((*loop)[6]);
+			double lmtPrice = std::stod((*loop)[1]);
+			int qty = std::stoi((*loop)[2]);
 
-			tmpCSVRead = { ticker, score, day2er, price, dmv, nnlsSPX, nnlsRUT, lmtPrice };
+			tmpCSVRead = { ticker, 0, 0, 0, 0, 0, 0, lmtPrice, qty };
 
 			CSVRead.push_back(tmpCSVRead);
 		}
