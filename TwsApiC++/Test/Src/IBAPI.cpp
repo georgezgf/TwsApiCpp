@@ -221,14 +221,14 @@ void IBAPI::FillVwapParams(Order& baseOrder, double maxPctVol, std::string start
 	TagValueSPtr tag4(new TagValue("allowPastEndTime", allowPastEndTime ? "1" : "0"));
 	TagValueSPtr tag5(new TagValue("noTakeLiq", noTakeLiq ? "1" : "0"));
 	TagValueSPtr tag6(new TagValue("speedUp", speedUp ? "1" : "0"));
-	TagValueSPtr tag7(new TagValue("monetaryValue", std::to_string(monetaryValue)));
+	//TagValueSPtr tag7(new TagValue("monetaryValue", std::to_string(monetaryValue)));
 	baseOrder.algoParams->push_back(tag1);
 	baseOrder.algoParams->push_back(tag2);
 	baseOrder.algoParams->push_back(tag3);
 	baseOrder.algoParams->push_back(tag4);
 	baseOrder.algoParams->push_back(tag5);
 	baseOrder.algoParams->push_back(tag6);
-	baseOrder.algoParams->push_back(tag7);
+	//baseOrder.algoParams->push_back(tag7);
 }
 
 std::vector<STOCK_ORD> IBAPI::genANOrder(std::vector<CSV_READ> csvRead, std::vector<POS> allPos) {

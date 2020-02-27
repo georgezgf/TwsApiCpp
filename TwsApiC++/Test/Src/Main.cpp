@@ -12,11 +12,11 @@ using namespace TwsApi;
 #define CurrentThreadId GetCurrentThreadId
 #define PrintProcessId printf("%ld  ", CurrentThreadId() )
 
-#define READCSV		//uncomment this to read CSV files
-#define SUBMITORDER	//uncomment this to submit open and close orders
+//#define READCSV		//uncomment this to read CSV files
+//#define SUBMITORDER	//uncomment this to submit open and close orders
 //#define TESTFUN		//uncomment this to test functions
 //#define BASKET
-//#define ANDV
+#define ANDV
 //#define ACCSUMMARY
 //#define POSMONITOR
 //#define HEDGEORDER
@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
 
 	TEST(0, testAPI.EC->eDisconnect());	// only for test purposes
 
-	if (TEST(0, testAPI.EC->eConnect("", port, 3)))
+	if (TEST(0, testAPI.EC->eConnect("", port, 1)))
 	{
 		PrintProcessId, printf("ServerVersion = %d\n", testAPI.EC->serverVersion());
 
@@ -301,7 +301,7 @@ int main(int argc, char *argv[])
 		//testAPI.closeAllStockVWAP(0.05, closeStartTime, closeEndTime, true, false, false, 100000);
 		//double cash = testAPI.queryCash();
 		//std::cout << "Cash = " << cash << std::endl;
-
+		//testAPI.sendVWAPOrder(tradeOrder, 0.05, tradeStartTime, tradeCloseTime, true, false, false, 100000);
 		//testAPI.sendFutureMktOrder("ESZ7", "GLOBEX", -1);	//E-mini S&P 500
 		//testAPI.sendFutureMktOrder("TFZ7", "NYBOT", 1);	//Russel 2000 mini futures
 

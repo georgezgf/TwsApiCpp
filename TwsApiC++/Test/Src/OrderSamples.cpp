@@ -69,6 +69,7 @@ Order OrderSamples::MarketOrder(std::string action, double quantity){
 	order.action = action;
 	order.orderType = "MKT";
 	order.totalQuantity = quantity;
+	//order.cashQty = cashQty;
 	//! [market]
 	return order;
 }

@@ -142,6 +142,7 @@ struct Order
 	// main order fields
 	IBString action;
 	long     totalQuantity;
+	double   cashQty;
 	IBString orderType;
 	double   lmtPrice;
 	double   auxPrice;
